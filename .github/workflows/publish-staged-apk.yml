@@ -22,10 +22,94 @@ jobs:
         run: |
           set -euo pipefail
           META="staging/release.json"
+          MODE="$(jq -r '.mode // "full_base64"' "$META")"
           OUTPUT="$(jq -r '.output' "$META")"
           EXPECTED_SHA="$(jq -r '.sha256' "$META")"
           mkdir -p "$(dirname "$OUTPUT")"
-          cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > "$OUTPUT"
+
+          if [ "$MODE" = "full_base64" ]; then
+            cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > "$OUTPUT"
+          elif [ "$MODE" = "apk_reconstruct_v1" ]; then
+            BASE="$(jq -r '.base' "$META")"
+            PATCH_SHA="$(jq -r '.patchSha256' "$META")"
+            test -f "$BASE"
+            command -v zstd >/dev/null
+            cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > /tmp/release-patch.json.xz
+            echo "$PATCH_SHA  /tmp/release-patch.json.xz" | sha256sum --check -
+            xz -dc /tmp/release-patch.json.xz > /tmp/release-patch.json
+            python3 - "$BASE" "$OUTPUT" /tmp/release-patch.json <<'PY'
+          import base64
+          import hashlib
+          import json
+          import pathlib
+          import subprocess
+          import sys
+          import tempfile
+          import zipfile
+          import zlib
+
+          base_path = pathlib.Path(sys.argv[1])
+          output_path = pathlib.Path(sys.argv[2])
+          patch_path = pathlib.Path(sys.argv[3])
+
+          base = base_path.read_bytes()
+          patch = json.loads(patch_path.read_text())
+
+          if patch.get("format") != "yh-apk-reconstruct-v1":
+              raise SystemExit("Unsupported staged APK patch format.")
+          if hashlib.sha256(base).hexdigest() != patch["base_sha256"]:
+              raise SystemExit("Base APK SHA-256 mismatch.")
+
+          output = bytearray()
+          with zipfile.ZipFile(base_path) as base_zip:
+              for op in patch["ops"]:
+                  kind = op[0]
+                  if kind == "c":
+                      start, length = op[1], op[2]
+                      output.extend(base[start:start + length])
+                  elif kind == "l":
+                      output.extend(base64.b64decode(op[1]))
+                  elif kind == "z":
+                      name, encoded_patch, level = op[1], op[2], op[3]
+                      old_raw = base_zip.read(name)
+                      with tempfile.TemporaryDirectory() as tmp:
+                          tmp = pathlib.Path(tmp)
+                          old_file = tmp / "old.bin"
+                          patch_file = tmp / "delta.zst"
+                          new_file = tmp / "new.bin"
+                          old_file.write_bytes(old_raw)
+                          patch_file.write_bytes(base64.b64decode(encoded_patch))
+                          subprocess.run(
+                              [
+                                  "zstd",
+                                  "-d",
+                                  f"--patch-from={old_file}",
+                                  str(patch_file),
+                                  "-q",
+                                  "-f",
+                                  "-o",
+                                  str(new_file),
+                              ],
+                              check=True,
+                          )
+                          new_raw = new_file.read_bytes()
+                      compressor = zlib.compressobj(level, zlib.DEFLATED, -15)
+                      output.extend(compressor.compress(new_raw) + compressor.flush())
+                  else:
+                      raise SystemExit(f"Unknown staged APK patch operation: {kind}")
+
+          if len(output) != patch["output_size"]:
+              raise SystemExit("Reconstructed APK size mismatch.")
+          digest = hashlib.sha256(output).hexdigest()
+          if digest != patch["output_sha256"]:
+              raise SystemExit("Reconstructed APK SHA-256 mismatch.")
+          output_path.write_bytes(output)
+          PY
+          else
+            echo "Unsupported release staging mode: $MODE" >&2
+            exit 1
+          fi
+
           echo "$EXPECTED_SHA  $OUTPUT" | sha256sum --check -
           cp staging/version.json version.json
 
