@@ -29,6 +29,16 @@ jobs:
 
           if [ "$MODE" = "full_base64" ]; then
             cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > "$OUTPUT"
+          elif [ "$MODE" = "apk_zstd_patch_v1" ]; then
+            BASE="$(jq -r '.base' "$META")"
+            BASE_SHA="$(jq -r '.baseSha256' "$META")"
+            PATCH_SHA="$(jq -r '.patchSha256' "$META")"
+            test -f "$BASE"
+            echo "$BASE_SHA  $BASE" | sha256sum --check -
+            command -v zstd >/dev/null
+            cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > /tmp/yellow-hat-signed-apk-patch.zst
+            echo "$PATCH_SHA  /tmp/yellow-hat-signed-apk-patch.zst" | sha256sum --check -
+            zstd -q -d -f --patch-from="$BASE" /tmp/yellow-hat-signed-apk-patch.zst -o "$OUTPUT"
           elif [ "$MODE" = "apk_reconstruct_v1" ]; then
             BASE="$(jq -r '.base' "$META")"
             PATCH_SHA="$(jq -r '.patchSha256' "$META")"
