@@ -1,0 +1,7 @@
+{
+  "mode": "apk_reconstruct_v1",
+  "base": "releases/Yellow_Hat_Resale_Inventory_and_Taxes_v0.2.26.apk",
+  "output": "releases/Yellow_Hat_Resale_Inventory_and_Taxes_v0.2.27.apk",
+  "sha256": "89ebc43c6d052379c544a352d4874befff6b0e41b43a0039f9d3860d313d162b",
+  "patchSha256": "db3f1096a0794714186f3fd42ae88c583b7140040f0186a2e595d71a52c95e9c"
+}
