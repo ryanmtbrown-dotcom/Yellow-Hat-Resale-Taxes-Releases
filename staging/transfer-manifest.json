@@ -1,0 +1,100 @@
+{
+  "count": 18,
+  "items": [
+    {
+      "name": "chunk_0001.b64",
+      "size": 90001,
+      "sha1": "bae7d463fd97a4d91d0256623b07fc1fac08cdbd"
+    },
+    {
+      "name": "chunk_0002.b64",
+      "size": 90001,
+      "sha1": "4a55b96a8a4638431527a13d47fd06744e1efcc2"
+    },
+    {
+      "name": "chunk_0003.b64",
+      "size": 90001,
+      "sha1": "67de0c727b1ba1dba59aaac56c646f82cfc509e9"
+    },
+    {
+      "name": "chunk_0004.b64",
+      "size": 90001,
+      "sha1": "a4b2f1e38f54d5a12cdbf0297f6e49e542798dc5"
+    },
+    {
+      "name": "chunk_0005.b64",
+      "size": 90001,
+      "sha1": "736e73b92b4efaa9848414f88292db3e463a7fdf"
+    },
+    {
+      "name": "chunk_0006.b64",
+      "size": 90001,
+      "sha1": "c041d112ec45cb86790df12b3b12d5cbdee5880d"
+    },
+    {
+      "name": "chunk_0007.b64",
+      "size": 90001,
+      "sha1": "2ecadf0f587dcc18eff6a8a95d3feafa73ce8a95"
+    },
+    {
+      "name": "chunk_0008.b64",
+      "size": 90001,
+      "sha1": "47f28ebf0634d9f9888441b370533de12fcdfad9"
+    },
+    {
+      "name": "chunk_0009.b64",
+      "size": 90001,
+      "sha1": "6509d99b90d7e72e6d41b326461c654cf5d435b6"
+    },
+    {
+      "name": "chunk_0010.b64",
+      "size": 90001,
+      "sha1": "6555ab41a67b5ea453dfe9d7b342009f0d90e878"
+    },
+    {
+      "name": "chunk_0011.b64",
+      "size": 90001,
+      "sha1": "163b132dfc2dce1bb3ee2e00a4a4317ac1bc0433"
+    },
+    {
+      "name": "chunk_0012.b64",
+      "size": 90001,
+      "sha1": "18a02508a7e2faff5ec5c132228a4117a3282f90"
+    },
+    {
+      "name": "chunk_0013.b64",
+      "size": 90001,
+      "sha1": "b2f601badef498144ce59d40517dba188cd71d01"
+    },
+    {
+      "name": "chunk_0014.b64",
+      "size": 90001,
+      "sha1": "86c6cd97b4e702fcaf57ad4fb8ecb96b741f925f"
+    },
+    {
+      "name": "chunk_0015.b64",
+      "size": 90001,
+      "sha1": "f94f85561511cd101306e529c087d7707f8d6fa2"
+    },
+    {
+      "name": "chunk_0016.b64",
+      "size": 90001,
+      "sha1": "d96b5dc01aaec7a28c379afe52711eff31f915fd"
+    },
+    {
+      "name": "chunk_0017.b64",
+      "size": 90001,
+      "sha1": "96bc3cc49ebafa53b63ee0152bbbac24fe5be9e6"
+    },
+    {
+      "name": "chunk_0018.b64",
+      "size": 89797,
+      "sha1": "731f971b3741282ff0f6ae08a0984bcbb974ec63"
+    }
+  ],
+  "patchSha256": "6a0a38b7be49d2cbf5ed322f673e487d751914ba8198940f9d1670283ca46975",
+  "targetSha256": "55da368d109552c486b6ff332eb6337f8cf28e255c63b6d6ec90750656a46847",
+  "baseSha256": "cef117f32195fae540c1584ceacabc0c6af20b9cfb8263aa5ee51d14b501d092",
+  "sourceCommit": "14894e94890cd63d5df369bb068a67a1d4005e5d",
+  "patchBytes": 1214846
+}
