@@ -1,0 +1,113 @@
+{
+  "count": 17,
+  "items": [
+    {
+      "name": "chunk_0001.b64",
+      "sha1": "837b10b875d1c0c20e4d4e26090857e1f75fd99a",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0002.b64",
+      "sha1": "d532a3d929d29a729fdd91c3dc76eaec40484453",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0003.b64",
+      "sha1": "2b8ba45ec6b161798e233c30686828b06bc2c749",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0004.b64",
+      "sha1": "cbbbfecaffb668fde89f08d47f6ff75d0e2a475a",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0005.b64",
+      "sha1": "be46345f4c9d71a0168daeb068a2ec416bb6bca9",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0006.b64",
+      "sha1": "1a35fcff897bed5a46b536da77b1fb09efe95de2",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0007.b64",
+      "sha1": "b2e7b4b87096f702cd6854e6d6cfa8d6f2e059f0",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0008.b64",
+      "sha1": "7dfe10144378ce02ca8a5aba9d05cde0e5fdd572",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0009.b64",
+      "sha1": "c6fd5bbe43105a7226568daa8efec0f96dd70406",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0010.b64",
+      "sha1": "4098ddffb281f6f2ff9efe1525074bad6ec16a42",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0011.b64",
+      "sha1": "03984a0870ec14110cc2f4162771a0df3cc6070b",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0012.b64",
+      "sha1": "f98a4989d6a96c2f0cb04bc2fcca61b06db2f50d",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0013.b64",
+      "sha1": "af0019702fe5ad143068874a67902fee134ef196",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0014.b64",
+      "sha1": "8210761a3816fd9ba6efe354b16223d126ef7ba5",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0015.b64",
+      "sha1": "677fe5f1054916510c96f789d5c50f89d9d112e1",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0016.b64",
+      "sha1": "f5793709c93acb78cdad855c3fa48d601933af40",
+      "size": 90001,
+      "raw_base64": 90000
+    },
+    {
+      "name": "chunk_0017.b64",
+      "sha1": "79cb485aa3641045494c75c4455f26b9ad8d2f55",
+      "size": 17913,
+      "raw_base64": 17912
+    }
+  ],
+  "baseSha256": "1af1f23f242484ae3822b91aa1d62e19eb49656d49a6040afaef4bb867a2bd4c",
+  "patchSha256": "82a6755d29b70fceb04ca8e29f6d976f8949dff3df2ad04f18185af0b2bc5f8a",
+  "targetSha256": "721ccb44acaabc18d2c5821fc6bfcfa65f60f8aaa4c735b747a3b9135dc13884",
+  "sourceCommit": "0bbce4e0483a7243a58aea2b8d6697f44843c52c",
+  "patchBytes": 1093432,
+  "base64Length": 1457912
+}
