@@ -1,0 +1,110 @@
+{
+  "format": "yellow-hat-apk-patch-transfer-v1",
+  "mode": "apk_zstd_patch_v1",
+  "version": "0.2.33",
+  "versionCode": 35,
+  "sourceCommit": "1bccbcb8859a96f4591d0f575130f0cbb3b656c4",
+  "baseSha256": "721ccb44acaabc18d2c5821fc6bfcfa65f60f8aaa4c735b747a3b9135dc13884",
+  "targetSha256": "fa4b81206af69ad303b9c72d301cd0b950dfcbbd08d23227ac34f21bae43c9ab",
+  "patchSha256": "330dcb03e2882161419e2ade831f3e908aa5114138a7bfcef299c2283b9937ad",
+  "patchBytes": 1256621,
+  "targetBytes": 6197808,
+  "count": 19,
+  "items": [
+    {
+      "name": "chunk_0001.b64",
+      "sha1": "a46b8b8b94e86f4c327fe0041f8a1660aa4008cf",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0002.b64",
+      "sha1": "012b8d8bbc09964c5c3a7e06a6798f26df9e0cfc",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0003.b64",
+      "sha1": "0554b504623e03417ad80aad77a11329ea3b0403",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0004.b64",
+      "sha1": "db2a4811954c4de0a84589c09db0c2e5ca57f425",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0005.b64",
+      "sha1": "6644a9b19445165301f381aae9fc5b2d1530f6e1",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0006.b64",
+      "sha1": "e4fd62b8055b40426853eb6d680f6b0d619bf649",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0007.b64",
+      "sha1": "6e25e4e53cd8cd90dcb3a83cc5e509109594def7",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0008.b64",
+      "sha1": "e834494b0b2a9dcedb0f196a6c29271bcc22e153",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0009.b64",
+      "sha1": "201f0876e582286437f460d720eb2e9998ada8ba",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0010.b64",
+      "sha1": "9db6736a0c31c6243bc2deaa78b76da1d7fa8ba9",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0011.b64",
+      "sha1": "b843b24bee68a4eb3f8f948ead5bb60aa7e714db",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0012.b64",
+      "sha1": "de4d4abff220cc03ccbf1d25823778507e70d00a",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0013.b64",
+      "sha1": "57f3a4e3c49cbaab44ecdde7d94e09cb0412536d",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0014.b64",
+      "sha1": "be7c9b5ad359684deea5407c50ca28424faa120d",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0015.b64",
+      "sha1": "b4884f43667df3266dba36a12eea4de83f3eb867",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0016.b64",
+      "sha1": "1323706dd6c0b5e24f657414a5970ed33a9b18a2",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0017.b64",
+      "sha1": "f6d0d2c14e051b4aa229e3d4462133d029f8fe86",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0018.b64",
+      "sha1": "723d87a31ab3c3ed643fdcf8acc4e4c256f56e39",
+      "size": 90001
+    },
+    {
+      "name": "chunk_0019.b64",
+      "sha1": "12cc15e9387470f45278a84395ec98e128080191",
+      "size": 55497
+    }
+  ]
+}
