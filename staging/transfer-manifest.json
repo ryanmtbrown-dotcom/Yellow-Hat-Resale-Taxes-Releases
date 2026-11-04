@@ -1,0 +1,89 @@
+{
+  "format": "yellow-hat-release-transport-v040",
+  "mode": "apk_zstd_patch_v1",
+  "baseSha256": "7104aaaacfc054349ea510d42c0c0a48992c669590e081b5f5c48c7424821497",
+  "outputSha256": "8431f158ccada0b33ca73cdae0e0bc726d08b2f20d4835bc349326bfb979862f",
+  "patchSha256": "1234dcbaa03afdddce527938cc83220637d17d6028f4bbf89fb1589a6ff448ac",
+  "chunks": [
+    {
+      "path": "staging/chunks/chunk_0001.b64",
+      "gitBlobSha1": "a701cb77371caae2fce31cb73336a51ee08b454a"
+    },
+    {
+      "path": "staging/chunks/chunk_0002.b64",
+      "gitBlobSha1": "22bf5c6d8a510dda8631b267f70e9aa7fbd01703"
+    },
+    {
+      "path": "staging/chunks/chunk_0003.b64",
+      "gitBlobSha1": "e08b0a7c45024860ee68f520c1220196642cf6c3"
+    },
+    {
+      "path": "staging/chunks/chunk_0004.b64",
+      "gitBlobSha1": "5e94706ffb81e762ab69fc2e8834789b15056330"
+    },
+    {
+      "path": "staging/chunks/chunk_0005.b64",
+      "gitBlobSha1": "ad86d068b95a0454b2ae0b3c63483c6bfce06857"
+    },
+    {
+      "path": "staging/chunks/chunk_0006.b64",
+      "gitBlobSha1": "c51a4ff43f1001885a5cf23df33cd3ae958f8a0a"
+    },
+    {
+      "path": "staging/chunks/chunk_0007.b64",
+      "gitBlobSha1": "06b819e0a3fcc3b2a52031ea798705bfbb70d6f7"
+    },
+    {
+      "path": "staging/chunks/chunk_0008.b64",
+      "gitBlobSha1": "27bcceb65b2ce38460464ba060fd417b8010681c"
+    },
+    {
+      "path": "staging/chunks/chunk_0009.b64",
+      "gitBlobSha1": "0be6a8cf1c177edda2c7f14276de59e13f652540"
+    },
+    {
+      "path": "staging/chunks/chunk_0010.b64",
+      "gitBlobSha1": "103cb9ecbe68c22c382dc7486a5a4c275478319a"
+    },
+    {
+      "path": "staging/chunks/chunk_0011.b64",
+      "gitBlobSha1": "058d750681fd9d59cc79460b85f102d4acbb4574"
+    },
+    {
+      "path": "staging/chunks/chunk_0012.b64",
+      "gitBlobSha1": "9f434d8912776fcae67f913e9fa6c4762764511b"
+    },
+    {
+      "path": "staging/chunks/chunk_0013.b64",
+      "gitBlobSha1": "6022edfb1b4c4f5864bbd52e3e4cf250401ed9de"
+    },
+    {
+      "path": "staging/chunks/chunk_0014.b64",
+      "gitBlobSha1": "29b282ff9d3b6653f6b0a9a4ab8c286029bd7340"
+    },
+    {
+      "path": "staging/chunks/chunk_0015.b64",
+      "gitBlobSha1": "803799126ada33f843cbf7b8a5f7fb60f07fdb9d"
+    },
+    {
+      "path": "staging/chunks/chunk_0016.b64",
+      "gitBlobSha1": "5b41d9227cdcecda6f99ab58df474b5d7f1a4143"
+    },
+    {
+      "path": "staging/chunks/chunk_0017.b64",
+      "gitBlobSha1": "cd2878ba3fa3c603c066b4140ffd28af4186d23a"
+    },
+    {
+      "path": "staging/chunks/chunk_0018.b64",
+      "gitBlobSha1": "c19d387e363fedc103ff36e9c36eb3a71308edc6"
+    },
+    {
+      "path": "staging/chunks/chunk_0019.b64",
+      "gitBlobSha1": "95fc08030ec20588e7667fc3e2c99f8dae780ebc"
+    },
+    {
+      "path": "staging/chunks/chunk_0020.b64",
+      "gitBlobSha1": "d221b9df7571a5f5fdab8f16f4a1fa47c07ba479"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "mode": "apk_zstd_patch_v1",
+  "base": "releases/Yellow_Hat_Resale_Inventory_and_Taxes_v0.2.39.apk",
+  "baseSha256": "7104aaaacfc054349ea510d42c0c0a48992c669590e081b5f5c48c7424821497",
+  "output": "releases/Yellow_Hat_Resale_Inventory_and_Taxes_v0.2.40.apk",
+  "patchSha256": "1234dcbaa03afdddce527938cc83220637d17d6028f4bbf89fb1589a6ff448ac",
+  "sha256": "8431f158ccada0b33ca73cdae0e0bc726d08b2f20d4835bc349326bfb979862f"
+}
