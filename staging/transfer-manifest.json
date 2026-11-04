@@ -1,0 +1,83 @@
+{
+  "kind": "yh-apk-transfer-v1",
+  "version": "0.2.39",
+  "versionCode": 41,
+  "sourceCommit": "1597fbb0abf50cb3dd7083e5da21c0b49e732a2e",
+  "baseSha256": "c792a03707dba7816fbfd115f1874725bcf280db416b6c9942ecf5c6154444aa",
+  "targetSha256": "7104aaaacfc054349ea510d42c0c0a48992c669590e081b5f5c48c7424821497",
+  "patchSha256": "f87d8af8b926b6569991604086760913fde2b6fcf5414ac609978d546b14565c",
+  "patchBytes": 932100,
+  "chunks": [
+    {
+      "name": "chunk_0001.b64",
+      "bytes": 90001,
+      "gitBlobSha": "fdfd6366b204aba2e83825261227e7f0764bc742"
+    },
+    {
+      "name": "chunk_0002.b64",
+      "bytes": 90001,
+      "gitBlobSha": "3bbd8a55da77ef73148ffd9954b8d220ab6a52d5"
+    },
+    {
+      "name": "chunk_0003.b64",
+      "bytes": 90001,
+      "gitBlobSha": "0411896993726bd02daa0f2b14023a0a5a1a351c"
+    },
+    {
+      "name": "chunk_0004.b64",
+      "bytes": 90001,
+      "gitBlobSha": "21d8ed23dac33adc2384d3cab0de756b98d0fc9f"
+    },
+    {
+      "name": "chunk_0005.b64",
+      "bytes": 90001,
+      "gitBlobSha": "ee673b39e6f51ed6449741b3c974b4e84461ad1b"
+    },
+    {
+      "name": "chunk_0006.b64",
+      "bytes": 90001,
+      "gitBlobSha": "c2ebe1444a98abbc2fe8e4031e4af2054c3aaa9e"
+    },
+    {
+      "name": "chunk_0007.b64",
+      "bytes": 90001,
+      "gitBlobSha": "5f609e9e40caaa3eda07735f5286c28b6412411a"
+    },
+    {
+      "name": "chunk_0008.b64",
+      "bytes": 90001,
+      "gitBlobSha": "8adf873e6c03d0334985d0edaee746b57acd89d4"
+    },
+    {
+      "name": "chunk_0009.b64",
+      "bytes": 90001,
+      "gitBlobSha": "9db3e78a1ad0e66bec9774752ca1720792339d34"
+    },
+    {
+      "name": "chunk_0010.b64",
+      "bytes": 90001,
+      "gitBlobSha": "8c9efc01772dff517fe833bff42d765b88e1363c"
+    },
+    {
+      "name": "chunk_0011.b64",
+      "bytes": 90001,
+      "gitBlobSha": "c1a5bbda5815343fdfc7cade5ddba417b7d466c6"
+    },
+    {
+      "name": "chunk_0012.b64",
+      "bytes": 90001,
+      "gitBlobSha": "30ac3531061c96d5c28a77f51395477837d92da2"
+    },
+    {
+      "name": "chunk_0013.b64",
+      "bytes": 90001,
+      "gitBlobSha": "2edfca53cb1f175897122cf25fab32a7da662211"
+    },
+    {
+      "name": "chunk_0014.b64",
+      "bytes": 72801,
+      "gitBlobSha": "cf65f079c40afea150d50a1e9242694ae050bdfe"
+    }
+  ],
+  "orderIsLexicographic": true
+}
