@@ -49,7 +49,7 @@ jobs:
             UNSIGNED_SHA="$(jq -r '.unsignedApkSha256' "$META")"
             PATCH_SHA="$(jq -r '.patchSha256' "$META")"
             case "$BUNDLE_URL" in
-              https://sdmntprwestus3.oaiusercontent.com/files/*) ;;
+              https://sdmntprwestus*.oaiusercontent.com/files/*) ;;
               *) echo "Unsupported unsigned artifact host" >&2; exit 1 ;;
             esac
             curl --fail --silent --show-error --location --retry 2 \
