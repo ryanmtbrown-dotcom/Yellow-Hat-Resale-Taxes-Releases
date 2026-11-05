@@ -145,15 +145,48 @@ jobs:
           fi
 
           echo "$EXPECTED_SHA  $OUTPUT" | sha256sum --check -
-          cp staging/version.json version.json
 
-      - name: Publish release feed atomically
+      - name: Publish and read back immutable signed APK Release asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="$(jq -er '.version' staging/version.json)"
+          CODE="$(jq -er '.versionCode' staging/version.json)"
+          PREVIOUS_CODE="$(jq -er '.versionCode' version.json)"
+          OUTPUT="$(jq -er '.output' staging/release.json)"
+          EXPECTED_SHA="$(jq -er '.sha256' staging/release.json)"
+          [ "$CODE" -gt "$PREVIOUS_CODE" ]
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          NAME="Yellow_Hat_Resale_Inventory_and_Taxes_v${VERSION}.apk"
+          TAG="v${VERSION}"
+          test "$OUTPUT" = "releases/$NAME"
+          test "$(jq -er '.sha256' staging/version.json)" = "$EXPECTED_SHA"
+          echo "$EXPECTED_SHA  $OUTPUT" | sha256sum --check -
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Existing release $TAG will only be accepted after exact asset SHA-256 readback."
+          else
+            gh release create "$TAG" "$OUTPUT" \
+              --title "Yellow Hat Resale v${VERSION}" \
+              --notes "Verified signed Android APK. SHA-256: ${EXPECTED_SHA}. Prior signed release retained as rollback." \
+              --target "$GITHUB_SHA"
+          fi
+          VERIFY_DIR="$RUNNER_TEMP/yellow-hat-asset-verify"
+          mkdir -p "$VERIFY_DIR"
+          gh release download "$TAG" --pattern "$NAME" --dir "$VERIFY_DIR"
+          echo "$EXPECTED_SHA  $VERIFY_DIR/$NAME" | sha256sum --check -
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${NAME}"
+          jq --arg url "$URL" '.apkUrl = $url' staging/version.json > "$RUNNER_TEMP/yellow-hat-verified-version.json"
+
+      - name: Publish verified release feed without committing APK binaries
         shell: bash
         run: |
           set -euo pipefail
+          cp "$RUNNER_TEMP/yellow-hat-verified-version.json" version.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/ version.json
+          git add version.json
           git rm -r staging
-          git commit -m "Publish staged Android release"
+          git commit -m "Publish verified Android release asset and feed"
           git push
