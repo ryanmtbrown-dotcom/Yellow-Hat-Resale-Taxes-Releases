@@ -19,6 +19,8 @@ jobs:
 
       - name: Assemble and verify signed APK
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           META="staging/release.json"
@@ -65,8 +67,19 @@ jobs:
               /tmp/yh-signed-delta.zst -o "$OUTPUT"
           elif [ "$MODE" = "apk_reconstruct_v1" ]; then
             BASE="$(jq -r '.base' "$META")"
+            BASE_SHA="$(jq -r '.baseSha256' "$META")"
             PATCH_SHA="$(jq -r '.patchSha256' "$META")"
-            test -f "$BASE"
+            if [ ! -f "$BASE" ]; then
+              # Earlier releases now live as immutable GitHub Release assets, not git blobs.
+              BASE_NAME="$(basename "$BASE")"
+              if [[ ! "$BASE" =~ ^releases/Yellow_Hat_Resale_Inventory_and_Taxes_v([0-9]+\.[0-9]+\.[0-9]+)\.apk$ ]]; then
+                echo "Invalid release base path" >&2; exit 1
+              fi
+              BASE_TAG="v${BASH_REMATCH[1]}"
+              mkdir -p "$(dirname "$BASE")"
+              gh release download "$BASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$BASE_NAME" --dir "$(dirname "$BASE")"
+            fi
+            echo "$BASE_SHA  $BASE" | sha256sum --check -
             command -v zstd >/dev/null
             cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > /tmp/release-patch.json.xz
             echo "$PATCH_SHA  /tmp/release-patch.json.xz" | sha256sum --check -
