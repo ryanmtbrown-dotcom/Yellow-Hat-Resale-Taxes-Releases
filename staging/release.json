@@ -1,9 +1,0 @@
-{
-  "mode": "verified_unsigned_bundle_delta_v1",
-  "output": "releases/Yellow_Hat_Resale_Inventory_and_Taxes_v0.2.48.apk",
-  "sha256": "860e03a16881279689cb737afad3cf4955ffd5ae517fa8573beab6e1cf050d22",
-  "unsignedBundleUrl": "https://sdmntprwestus3.oaiusercontent.com/files/00000000-58b0-81fd-a4b0-82b40e0bb4fe/raw?se=2026-11-07T00%3A25%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=0ff74185-f32b-5389-9826-ea83a080a98a&skoid=1a0ef048-201c-43e0-8950-52d58956a71a&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-11-07T00%3A16%3A09Z&ske=2026-11-08T00%3A16%3A09Z&sks=b&skv=2026-02-06&sig=UCTEQMmp//MAgRF5yulPAHHEkhou6R%2BO5RmZNPl0qXY%3D",
-  "unsignedBundleSha256": "8587751d1ef73e2fa96e8f1e719591dc80ce118853ecb72789149a1be4f267d4",
-  "unsignedApkSha256": "829350e5d501a518341d073aad4e95986c1b97795bc02f21093388384813f71f",
-  "patchSha256": "75076637fb761d8e648c6e309737fea978579b30e1323281b77e68636099a63b"
-}
