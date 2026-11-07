@@ -59,7 +59,17 @@ jobs:
             BASE="$(jq -r '.base' "$META")"
             BASE_SHA="$(jq -r '.baseSha256' "$META")"
             PATCH_SHA="$(jq -r '.patchSha256' "$META")"
-            test -f "$BASE"
+            if [ ! -f "$BASE" ]; then
+              # Previous signed APKs live as immutable GitHub Release assets.
+              # Download only the exact prior-version asset; verify its SHA below.
+              if [[ ! "$BASE" =~ ^releases/Yellow_Hat_Resale_Inventory_and_Taxes_v([0-9]+\\.[0-9]+\\.[0-9]+)\\.apk$ ]]; then
+                echo "Invalid signed base path" >&2; exit 1
+              fi
+              BASE_TAG="v${BASH_REMATCH[1]}"
+              mkdir -p "$(dirname "$BASE")"
+              gh release download "$BASE_TAG" --repo "$GITHUB_REPOSITORY" \
+                --pattern "$(basename "$BASE")" --dir "$(dirname "$BASE")"
+            fi
             echo "$BASE_SHA  $BASE" | sha256sum --check -
             command -v zstd >/dev/null
             cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > /tmp/yellow-hat-signed-apk-patch.zst
