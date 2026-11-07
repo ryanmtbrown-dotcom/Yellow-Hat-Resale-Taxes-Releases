@@ -19,7 +19,7 @@ jobs:
   publish:
     if: github.event.head_commit.message == 'Authorized one-time v0.2.49 signed release publication'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 11
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,7 +28,7 @@ jobs:
       - name: Confirm owner-approved staged release
         shell: bash
         env:
-          CONFIRM_VERSION: '0.2.48'
+          CONFIRM_VERSION: '0.2.49'
         run: |
           set -euo pipefail
           test -s staging/release.json
