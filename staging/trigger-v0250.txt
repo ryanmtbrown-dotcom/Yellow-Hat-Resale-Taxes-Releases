@@ -1,4 +1,4 @@
-Owner-approved exact signed v0.2.50 release
+Owner-approved exact signed v0.2.50 release — corrected publisher path validation
 Version code: 52
 Signed APK SHA-256: deee19c04aa9ce7acdc5ace2b550e952b0b15ae3daee7d40e3706cccd3602b2d
 Base v0.2.49 preserved for rollback.
