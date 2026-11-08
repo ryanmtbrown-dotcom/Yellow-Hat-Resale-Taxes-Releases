@@ -67,7 +67,7 @@ jobs:
             if [ ! -f "$BASE" ]; then
               # Previous signed APKs live as immutable GitHub Release assets.
               # Download only the exact prior-version asset; verify its SHA below.
-              if [[ ! "$BASE" =~ ^releases/Yellow_Hat_Resale_Inventory_and_Taxes_v([0-9]+\\.[0-9]+\\.[0-9]+)\\.apk$ ]]; then
+              if [[ ! "$BASE" =~ ^releases/Yellow_Hat_Resale_Inventory_and_Taxes_v([0-9]+\.[0-9]+\.[0-9]+)\.apk$ ]]; then
                 echo "Invalid signed base path" >&2; exit 1
               fi
               BASE_TAG="v${BASH_REMATCH[1]}"
