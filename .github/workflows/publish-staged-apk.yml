@@ -2,6 +2,11 @@ name: Publish staged APK (manual approval only)
 # A staging commit never publishes by itself. The owner must explicitly run
 # this workflow and type the staged version after reviewing the signed candidate.
 on:
+  # Explicit one-time v0.2.51 owner publication; remove after exact live verification.
+  push:
+    branches: [main]
+    paths:
+      - staging/trigger-v0251.txt
   workflow_dispatch:
     inputs:
       confirm_version:
@@ -29,7 +34,7 @@ jobs:
       - name: Confirm owner-approved staged release
         shell: bash
         env:
-          CONFIRM_VERSION: ${{ inputs.confirm_version }}
+          CONFIRM_VERSION: ${{ github.event_name == 'push' && '0.2.51' || inputs.confirm_version }}
         run: |
           set -euo pipefail
           test -s staging/release.json
