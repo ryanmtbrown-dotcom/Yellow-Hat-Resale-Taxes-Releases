@@ -8,6 +8,11 @@ on:
         description: 'Type the exact staged version, for example 0.2.45'
         required: true
         type: string
+  # OWNER ONE-TIME EXCEPTION: ONLY workflow-file change on main triggers v0.2.54.
+  # Restore workflow_dispatch-only immediately after publishing.
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-staged-apk.yml]
 
 concurrency:
   group: yellow-hat-staged-apk-publication
@@ -29,7 +34,7 @@ jobs:
       - name: Confirm owner-approved staged release
         shell: bash
         env:
-          CONFIRM_VERSION: ${{ inputs.confirm_version }}
+          CONFIRM_VERSION: ${{ inputs.confirm_version || '0.2.54' }}
         run: |
           set -euo pipefail
           test -s staging/release.json
