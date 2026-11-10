@@ -1,0 +1,99 @@
+{
+  "product": "Yellow Hat Resale Inventory & Taxes",
+  "version": "0.2.64",
+  "versionCode": 66,
+  "sourceCommit": "f1368d575944056c455bb64863b8b0cfa6247056",
+  "verifiedBuildRun": 42780380095,
+  "signedApkSha256": "62236740e1923b601954a4c438f411361a6f58943cbe3e38feaf300eee144823",
+  "signedApkBytes": 6613622,
+  "compressedSha256": "41e6198e604d5bbf81a83f25390e19dfa49aec4159a34d79943970be8176d826",
+  "compressedBytes": 6091740,
+  "base64Length": 8122320,
+  "certificateSha256": "48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4",
+  "baseVersion": "0.2.63",
+  "baseVersionCode": 65,
+  "baseApkSha256": "565492153bac0413c013edef16a89db56f153511347357fb0450f3ec07059ac7",
+  "output": "releases/Yellow_Hat_Resale_Inventory_and_Taxes_v0.2.64.apk",
+  "chunks": [
+    {
+      "name": "chunk-000.b64",
+      "size": 524288,
+      "blobSha": "af36189309523544eede73542e88de16a94f50c1"
+    },
+    {
+      "name": "chunk-001.b64",
+      "size": 524288,
+      "blobSha": "f689ed86ffa884ca1fa01975fb7f0c44bb362856"
+    },
+    {
+      "name": "chunk-002.b64",
+      "size": 524288,
+      "blobSha": "e926042c4ab1c56b39aec620955814957753096f"
+    },
+    {
+      "name": "chunk-003.b64",
+      "size": 524288,
+      "blobSha": "dc53e07fe37dcb6771ead7fa162d74f07702723c"
+    },
+    {
+      "name": "chunk-004.b64",
+      "size": 524288,
+      "blobSha": "a5d90cafa0f45709023a3de399667b734a37715c"
+    },
+    {
+      "name": "chunk-005.b64",
+      "size": 524288,
+      "blobSha": "2f51fc7d1e10e910ee86191a28ddbd50618e1e2e"
+    },
+    {
+      "name": "chunk-006.b64",
+      "size": 524288,
+      "blobSha": "8f89381249b105f9709a01f68d4ee60994eb1b1c"
+    },
+    {
+      "name": "chunk-007.b64",
+      "size": 524288,
+      "blobSha": "6753d6aadd76f0c3e0c6374da209becbe3a63f3e"
+    },
+    {
+      "name": "chunk-008.b64",
+      "size": 524288,
+      "blobSha": "ab60c922791862bb34510a0339e6d341197b6069"
+    },
+    {
+      "name": "chunk-009.b64",
+      "size": 524288,
+      "blobSha": "9b4340bbdf517570732741e61a664c4cc4d299d9"
+    },
+    {
+      "name": "chunk-010.b64",
+      "size": 524288,
+      "blobSha": "b8ba750f85154063b76cfdd5ec393116d92c8e2a"
+    },
+    {
+      "name": "chunk-011.b64",
+      "size": 524288,
+      "blobSha": "60b9da8f58b20e0962c44b02c743b3fe2df36ce7"
+    },
+    {
+      "name": "chunk-012.b64",
+      "size": 524288,
+      "blobSha": "1a5e370a9a98734b3cf20bce11e7faac12f04a0b"
+    },
+    {
+      "name": "chunk-013.b64",
+      "size": 524288,
+      "blobSha": "2654d366f616677d8b134992e26df15f2504900b"
+    },
+    {
+      "name": "chunk-014.b64",
+      "size": 524288,
+      "blobSha": "82a39e026031499c554f7e1c7f76534df8330bf1"
+    },
+    {
+      "name": "chunk-015.b64",
+      "size": 258000,
+      "blobSha": "5412dedee24f31f35233d782b73d5113e3178a08"
+    }
+  ]
+}
