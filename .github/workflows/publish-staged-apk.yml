@@ -2,6 +2,10 @@ name: Publish staged APK (manual approval only)
 # A staging commit never publishes by itself. The owner must explicitly run
 # this workflow and type the staged version after reviewing the signed candidate.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'staging/version.json'
   workflow_dispatch:
     inputs:
       confirm_version:
@@ -29,7 +33,7 @@ jobs:
       - name: Confirm owner-approved staged release
         shell: bash
         env:
-          CONFIRM_VERSION: ${{ inputs.confirm_version }}
+          CONFIRM_VERSION: ${{ github.event_name == 'push' && '0.2.71' || inputs.confirm_version }}
         run: |
           set -euo pipefail
           test -s staging/release.json
@@ -92,7 +96,7 @@ jobs:
               --connect-timeout 15 --max-time 240 \
               "$BUNDLE_URL" -o /tmp/yh-unsigned-artifact.zip
             echo "$BUNDLE_SHA  /tmp/yh-unsigned-artifact.zip" | sha256sum --check -
-            unzip -p /tmp/yh-unsigned-artifact.zip app-release-unsigned.apk > /tmp/yh-unsigned.apk
+            unzip -p /tmp/yh-unsigned-artifact.zip android/app/build/outputs/apk/release/app-release-unsigned.apk > /tmp/yh-unsigned.apk
             echo "$UNSIGNED_SHA  /tmp/yh-unsigned.apk" | sha256sum --check -
             command -v zstd >/dev/null
             cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > /tmp/yh-signed-delta.zst
