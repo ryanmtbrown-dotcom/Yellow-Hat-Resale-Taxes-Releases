@@ -1,0 +1,261 @@
+name: Publish verified v0.2.68 APK (single use)
+# Exact-source, original-key signed candidate. One-shot push trigger only.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/_one_shot_publish_068.yml
+
+concurrency:
+  group: yellow-hat-staged-apk-publication
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.event.head_commit.message == 'ONE-SHOT PUBLISH VERIFIED v0.2.68 2026-11-10' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Confirm owner-approved staged release
+        shell: bash
+        env:
+          CONFIRM_VERSION: '0.2.68'
+        run: |
+          set -euo pipefail
+          test -s staging/release.json
+          test -s staging/version.json
+          STAGED_VERSION="$(jq -er '.version' staging/version.json)"
+          test -n "$CONFIRM_VERSION"
+          test "$CONFIRM_VERSION" = "$STAGED_VERSION" || {
+            echo 'Manual confirmation differs from the staged APK version.' >&2
+            exit 1
+          }
+
+      - name: Assemble and verify signed APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          META="staging/release.json"
+          MODE="$(jq -r '.mode // "full_base64"' "$META")"
+          OUTPUT="$(jq -r '.output' "$META")"
+          EXPECTED_SHA="$(jq -r '.sha256' "$META")"
+          mkdir -p "$(dirname "$OUTPUT")"
+
+          if [ "$MODE" = "full_base64" ]; then
+            cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > "$OUTPUT"
+          elif [ "$MODE" = "apk_zstd_patch_v1" ]; then
+            BASE="$(jq -r '.base' "$META")"
+            BASE_SHA="$(jq -r '.baseSha256' "$META")"
+            PATCH_SHA="$(jq -r '.patchSha256' "$META")"
+            if [ ! -f "$BASE" ]; then
+              # Previous signed APKs live as immutable GitHub Release assets.
+              # Download only the exact prior-version asset; verify its SHA below.
+              if [[ ! "$BASE" =~ ^releases/Yellow_Hat_Resale_Inventory_and_Taxes_v([0-9]+\.[0-9]+\.[0-9]+)\.apk$ ]]; then
+                echo "Invalid signed base path" >&2; exit 1
+              fi
+              BASE_TAG="v${BASH_REMATCH[1]}"
+              mkdir -p "$(dirname "$BASE")"
+              gh release download "$BASE_TAG" --repo "$GITHUB_REPOSITORY" \
+                --pattern "$(basename "$BASE")" --dir "$(dirname "$BASE")"
+            fi
+            echo "$BASE_SHA  $BASE" | sha256sum --check -
+            command -v zstd >/dev/null
+            cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > /tmp/yellow-hat-signed-apk-patch.zst
+            echo "$PATCH_SHA  /tmp/yellow-hat-signed-apk-patch.zst" | sha256sum --check -
+            zstd -q -d -f --patch-from="$BASE" /tmp/yellow-hat-signed-apk-patch.zst -o "$OUTPUT"
+          elif [ "$MODE" = "verified_unsigned_bundle_delta_v1" ]; then
+            # Transfer only a small signed-byte delta. The source unsigned
+            # APK comes from the exact-source private CI artifact archive,
+            # temporarily copied into a short-lived HTTPS file reference.
+            # A failed fetch or hash never updates the public manifest.
+            BUNDLE_URL="$(jq -r '.unsignedBundleUrl' "$META")"
+            BUNDLE_SHA="$(jq -r '.unsignedBundleSha256' "$META")"
+            UNSIGNED_SHA="$(jq -r '.unsignedApkSha256' "$META")"
+            PATCH_SHA="$(jq -r '.patchSha256' "$META")"
+            case "$BUNDLE_URL" in
+              https://*.oaiusercontent.com/files/*) ;;
+              *) echo "Unsupported unsigned artifact host" >&2; exit 1 ;;
+            esac
+            curl --fail --silent --show-error --location --retry 2 \
+              --connect-timeout 15 --max-time 240 \
+              "$BUNDLE_URL" -o /tmp/yh-unsigned-artifact.zip
+            echo "$BUNDLE_SHA  /tmp/yh-unsigned-artifact.zip" | sha256sum --check -
+            unzip -p /tmp/yh-unsigned-artifact.zip app-release-unsigned.apk > /tmp/yh-unsigned.apk
+            echo "$UNSIGNED_SHA  /tmp/yh-unsigned.apk" | sha256sum --check -
+            command -v zstd >/dev/null
+            cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > /tmp/yh-signed-delta.zst
+            echo "$PATCH_SHA  /tmp/yh-signed-delta.zst" | sha256sum --check -
+            zstd -q -d -f --patch-from=/tmp/yh-unsigned.apk \
+              /tmp/yh-signed-delta.zst -o "$OUTPUT"
+          elif [ "$MODE" = "apk_reconstruct_v1" ]; then
+            BASE="$(jq -r '.base' "$META")"
+            BASE_SHA="$(jq -r '.baseSha256' "$META")"
+            PATCH_SHA="$(jq -r '.patchSha256' "$META")"
+            if [ ! -f "$BASE" ]; then
+              # Earlier releases now live as immutable GitHub Release assets, not git blobs.
+              BASE_NAME="$(basename "$BASE")"
+              if [[ ! "$BASE" =~ ^releases/Yellow_Hat_Resale_Inventory_and_Taxes_v([0-9]+\.[0-9]+\.[0-9]+)\.apk$ ]]; then
+                echo "Invalid release base path" >&2; exit 1
+              fi
+              BASE_TAG="v${BASH_REMATCH[1]}"
+              mkdir -p "$(dirname "$BASE")"
+              gh release download "$BASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$BASE_NAME" --dir "$(dirname "$BASE")"
+            fi
+            echo "$BASE_SHA  $BASE" | sha256sum --check -
+            command -v zstd >/dev/null
+            cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > /tmp/release-patch.json.xz
+            echo "$PATCH_SHA  /tmp/release-patch.json.xz" | sha256sum --check -
+            xz -dc /tmp/release-patch.json.xz > /tmp/release-patch.json
+            python3 - "$BASE" "$OUTPUT" /tmp/release-patch.json <<'PY'
+          import base64
+          import hashlib
+          import json
+          import pathlib
+          import subprocess
+          import sys
+          import tempfile
+          import zipfile
+          import zlib
+
+          base_path = pathlib.Path(sys.argv[1])
+          output_path = pathlib.Path(sys.argv[2])
+          patch_path = pathlib.Path(sys.argv[3])
+
+          base = base_path.read_bytes()
+          patch = json.loads(patch_path.read_text())
+
+          if patch.get("format") != "yh-apk-reconstruct-v1":
+              raise SystemExit("Unsupported staged APK patch format.")
+          if hashlib.sha256(base).hexdigest() != patch["base_sha256"]:
+              raise SystemExit("Base APK SHA-256 mismatch.")
+
+          output = bytearray()
+          with zipfile.ZipFile(base_path) as base_zip:
+              for op in patch["ops"]:
+                  kind = op[0]
+                  if kind == "c":
+                      start, length = op[1], op[2]
+                      output.extend(base[start:start + length])
+                  elif kind == "l":
+                      output.extend(base64.b64decode(op[1]))
+                  elif kind == "z":
+                      name, encoded_patch, level = op[1], op[2], op[3]
+                      old_raw = base_zip.read(name)
+                      with tempfile.TemporaryDirectory() as tmp:
+                          tmp = pathlib.Path(tmp)
+                          old_file = tmp / "old.bin"
+                          patch_file = tmp / "delta.zst"
+                          new_file = tmp / "new.bin"
+                          old_file.write_bytes(old_raw)
+                          patch_file.write_bytes(base64.b64decode(encoded_patch))
+                          subprocess.run(
+                              [
+                                  "zstd",
+                                  "-d",
+                                  f"--patch-from={old_file}",
+                                  str(patch_file),
+                                  "-q",
+                                  "-f",
+                                  "-o",
+                                  str(new_file),
+                              ],
+                              check=True,
+                          )
+                          new_raw = new_file.read_bytes()
+                      compressor = zlib.compressobj(level, zlib.DEFLATED, -15)
+                      output.extend(compressor.compress(new_raw) + compressor.flush())
+                  else:
+                      raise SystemExit(f"Unknown staged APK patch operation: {kind}")
+
+          if len(output) != patch["output_size"]:
+              raise SystemExit("Reconstructed APK size mismatch.")
+          digest = hashlib.sha256(output).hexdigest()
+          if digest != patch["output_sha256"]:
+              raise SystemExit("Reconstructed APK SHA-256 mismatch.")
+          output_path.write_bytes(output)
+          PY
+          else
+            echo "Unsupported release staging mode: $MODE" >&2
+            exit 1
+          fi
+
+          echo "$EXPECTED_SHA  $OUTPUT" | sha256sum --check -
+
+      - name: Publish and read back immutable signed APK Release asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="$(jq -er '.version' staging/version.json)"
+          CODE="$(jq -er '.versionCode' staging/version.json)"
+          PREVIOUS_CODE="$(jq -er '.versionCode' version.json)"
+          OUTPUT="$(jq -er '.output' staging/release.json)"
+          EXPECTED_SHA="$(jq -er '.sha256' staging/release.json)"
+          [ "$CODE" -gt "$PREVIOUS_CODE" ]
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          NAME="Yellow_Hat_Resale_Inventory_and_Taxes_v${VERSION}.apk"
+          TAG="v${VERSION}"
+          test "$OUTPUT" = "releases/$NAME"
+          test "$(jq -er '.sha256' staging/version.json)" = "$EXPECTED_SHA"
+          echo "$EXPECTED_SHA  $OUTPUT" | sha256sum --check -
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Existing release $TAG will only be accepted after exact asset SHA-256 readback."
+          else
+            gh release create "$TAG" "$OUTPUT" \
+              --title "Yellow Hat Resale v${VERSION}" \
+              --notes "Verified signed Android APK. SHA-256: ${EXPECTED_SHA}. Prior signed release retained as rollback." \
+              --target "$GITHUB_SHA"
+          fi
+          VERIFY_DIR="$RUNNER_TEMP/yellow-hat-asset-verify"
+          mkdir -p "$VERIFY_DIR"
+          gh release download "$TAG" --pattern "$NAME" --dir "$VERIFY_DIR"
+          echo "$EXPECTED_SHA  $VERIFY_DIR/$NAME" | sha256sum --check -
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${NAME}"
+          jq --arg url "$URL" '.apkUrl = $url' staging/version.json > "$RUNNER_TEMP/yellow-hat-verified-version.json"
+
+      - name: Publish verified release feed and retain current plus one previous APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PREVIOUS_VERSION="$(jq -er '.version' version.json)"
+          NEW_VERSION="$(jq -er '.version' "$RUNNER_TEMP/yellow-hat-verified-version.json")"
+          [[ "$PREVIOUS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$NEW_VERSION" != "$PREVIOUS_VERSION"
+          # Protect the previous signed GitHub Release asset while the new
+          # artifact is checked; do not rebuild or re-sign APKs in this job.
+          gh release view "v$PREVIOUS_VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release view "v$NEW_VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null
+          cp "$RUNNER_TEMP/yellow-hat-verified-version.json" version.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git rm -r staging
+          git commit -m "Publish verified Android release asset and feed"
+          git push
+
+          # Cleanup happens only after successful signed-APK readback and
+          # the new live updater commit. Keep exactly current and previous.
+          while IFS= read -r old_tag; do
+            [[ -n "$old_tag" ]] || continue
+            case "$old_tag" in
+              "v$NEW_VERSION"|"v$PREVIOUS_VERSION") continue ;;
+            esac
+            if [[ "$old_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              gh release delete "$old_tag" --yes --repo "$GITHUB_REPOSITORY"
+            fi
+          done < <(gh release list --limit 100 --repo "$GITHUB_REPOSITORY" \
+            --json tagName --jq '.[].tagName')
