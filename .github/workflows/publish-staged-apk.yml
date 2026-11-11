@@ -1,6 +1,6 @@
-name: Publish staged APK (one-time authorized v0.2.69)
-# Temporary, version-locked push trigger authorized by the owner's explicit request
-# to publish v0.2.69. Remove this push trigger after successful feed readback.
+name: Publish staged APK (manual approval only)
+# A staging commit never publishes by itself. The owner must explicitly run
+# this workflow and type the staged version after reviewing the signed candidate.
 on:
   workflow_dispatch:
     inputs:
@@ -8,10 +8,6 @@ on:
         description: 'Type the exact staged version, for example 0.2.45'
         required: true
         type: string
-  push:
-    branches: [main]
-    paths:
-      - staging/version.json
 
 concurrency:
   group: yellow-hat-staged-apk-publication
@@ -22,7 +18,7 @@ permissions:
 
 jobs:
   publish:
-    if: github.actor != 'github-actions[bot]' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.head_commit.message == 'OWNER_APPROVED_PUBLISH_v0.2.69'))
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -33,7 +29,7 @@ jobs:
       - name: Confirm owner-approved staged release
         shell: bash
         env:
-          CONFIRM_VERSION: ${{ github.event_name == 'push' && '0.2.69' || inputs.confirm_version }}
+          CONFIRM_VERSION: ${{ inputs.confirm_version }}
         run: |
           set -euo pipefail
           test -s staging/release.json
