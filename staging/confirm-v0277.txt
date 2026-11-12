@@ -1,3 +1,0 @@
-Owner-authorized one-time publication of v0.2.77 / Android code 79.
-Exact signed SHA-256: 1f4b872508636b8020450781944b5cae8f46c7ac880f14db3c6ebe342ceed6a6
-Retain published v0.2.76 as rollback. Do not update feed until signed public APK readback matches.
