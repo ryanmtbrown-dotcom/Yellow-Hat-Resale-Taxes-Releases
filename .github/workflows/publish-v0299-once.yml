@@ -1,0 +1,87 @@
+name: Publish approved v0.2.99 signed APK (one time)
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-v0299-once.yml
+concurrency:
+  group: yellow-hat-staged-apk-publication
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.actor != 'github-actions[bot]' && github.event.head_commit.message == 'publish(v0.2.99): stage exact signed APK for one-time verified release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Confirm approved published rollback and exact 0.2.99 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(jq -er '.version' version.json)" = "0.2.98"
+          test "$(jq -er '.versionCode' version.json)" = "100"
+          test "$(jq -er '.sha256' version.json)" = "cd9b1110f9b240147f1158f417fd2937fa2a34a36fbc042c5284e3801dd23a67"
+          test "$(jq -er '.version' staging/version.json)" = "0.2.99"
+          test "$(jq -er '.versionCode' staging/version.json)" = "101"
+          test "$(jq -er '.sourceSha' staging/version.json)" = "099bab0dd17ab977c3e3d4f970392f5153d4861e"
+          test "$(jq -er '.sha256' staging/version.json)" = "c2081f4f50bc70380affccb1621401b64f576bdce74746f2a4e22d96ca5e0beb"
+          test "$(jq -er '.mode' staging/release.json)" = "verified_unsigned_bundle_delta_v1"
+          test "$(jq -er '.sha256' staging/release.json)" = "$(jq -er '.sha256' staging/version.json)"
+          gh release view v0.2.98 --repo "$GITHUB_REPOSITORY"
+      - name: Reassemble exact original-key signed APK without rebuilding or resigning
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE_URL="$(jq -er '.unsignedBundleUrl' staging/release.json)"
+          case "$BUNDLE_URL" in https://*.oaiusercontent.com/files/*) ;; *) echo "Unexpected artifact origin"; exit 1 ;; esac
+          curl --fail --silent --show-error --location --retry 2 --connect-timeout 15 --max-time 180 "$BUNDLE_URL" -o /tmp/yh-v0299-unsigned-bundle.zip
+          echo "$(jq -er '.unsignedBundleSha256' staging/release.json)  /tmp/yh-v0299-unsigned-bundle.zip" | sha256sum --check -
+          unzip -p /tmp/yh-v0299-unsigned-bundle.zip app-release-unsigned.apk > /tmp/yh-v0299-unsigned.apk
+          echo "$(jq -er '.unsignedApkSha256' staging/release.json)  /tmp/yh-v0299-unsigned.apk" | sha256sum --check -
+          cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > /tmp/yh-v0299-signed-delta.zst
+          echo "$(jq -er '.patchSha256' staging/release.json)  /tmp/yh-v0299-signed-delta.zst" | sha256sum --check -
+          command -v zstd
+          mkdir -p releases
+          OUTPUT="$(jq -er '.output' staging/release.json)"
+          test "$OUTPUT" = "releases/Yellow_Hat_Resale_Inventory_and_Taxes_v0.2.99.apk"
+          zstd -q -d -f --patch-from=/tmp/yh-v0299-unsigned.apk /tmp/yh-v0299-signed-delta.zst -o "$OUTPUT"
+          echo "$(jq -er '.sha256' staging/release.json)  $OUTPUT" | sha256sum --check -
+          unzip -tq "$OUTPUT" | tail -1
+          unzip -p /tmp/yh-v0299-unsigned-bundle.zip tools/lib/apksigner.jar > /tmp/yh-v0299-apksigner.jar
+          java -jar /tmp/yh-v0299-apksigner.jar verify --verbose --print-certs "$OUTPUT" > /tmp/yh-v0299-cert.txt
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/yh-v0299-cert.txt
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/yh-v0299-cert.txt
+          grep -Fq 'Signer #1 certificate SHA-256 digest: 48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4' /tmp/yh-v0299-cert.txt
+      - name: Publish original signed APK asset and verify downloaded bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUTPUT="releases/Yellow_Hat_Resale_Inventory_and_Taxes_v0.2.99.apk"
+          TAG="v0.2.99"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Unrecognized preexisting release; refuse to overwrite"; exit 1
+          fi
+          gh release create "$TAG" "$OUTPUT" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Yellow Hat Resale v0.2.99' --notes 'Verified original-certificate Android APK. Based on published v0.2.98 protections, with current-record financial changes and operational enhancements. Source 099bab0dd17ab977c3e3d4f970392f5153d4861e. SHA-256 c2081f4f50bc70380affccb1621401b64f576bdce74746f2a4e22d96ca5e0beb. Retain signed v0.2.98 as rollback.'
+          mkdir -p "$RUNNER_TEMP/apk-verification"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$(basename "$OUTPUT")" --dir "$RUNNER_TEMP/apk-verification"
+          echo "c2081f4f50bc70380affccb1621401b64f576bdce74746f2a4e22d96ca5e0beb  $RUNNER_TEMP/apk-verification/$(basename "$OUTPUT")" | sha256sum --check -
+          gh release view v0.2.98 --repo "$GITHUB_REPOSITORY" >/dev/null
+      - name: Promote verified v0.2.99 updater and remove temporary staging workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(jq -er '.version' version.json)" = "0.2.98"
+          jq --arg timestamp "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" '.publishedAt = $timestamp' staging/version.json > version.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git rm -r staging .github/workflows/publish-v0299-once.yml
+          git commit -m "Publish verified v0.2.99 APK and updater; retain v0.2.98 rollback"
+          git push origin main
+          gh release view v0.2.98 --repo "$GITHUB_REPOSITORY" >/dev/null
