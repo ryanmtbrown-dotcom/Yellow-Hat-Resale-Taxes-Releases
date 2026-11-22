@@ -1,0 +1,101 @@
+name: Publish Yellow Hat v3.0.6 verified original-key APK (one-time)
+# One exact owner-approved release; no recurring CI or signing credentials.
+on:
+  push:
+    branches:
+      - release/v306-publish-once-20261122
+    paths:
+      - .github/workflows/publish-v306-once.yml
+permissions:
+  contents: write
+concurrency:
+  group: yellow-hat-release-v306-once
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: >-
+      github.repository == 'ryanmtbrown-dotcom/Yellow-Hat-Resale-Taxes-Releases' &&
+      github.actor != 'github-actions[bot]' &&
+      github.event.head_commit.message == 'ci: publish verified original-key signed Yellow Hat v3.0.6'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+      V: '3.0.6'
+      APP: 'Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.6.apk'
+      EXPECTED_SHA: '9413779a335d059af52dae3d5b61b15ad2f7c35b92d0d82ddf451c62827c1b9c'
+      SOURCE_SHA: '56225c9e338ae9a8b12791a0f8fdf43934538742'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Lock exact published predecessor and release provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(jq -r '.version' version.json)" = '3.0.4'
+          test "$(jq -r '.versionCode' version.json)" = '106'
+          test "$(jq -r '.sha256' version.json)" = '47dd9f168d66e561a37e4b25fd92a43923e39dd2a931fa2e511ebc2c24ebe887'
+          test "$(jq -r '.sourceSha' staging/version.json)" = "$SOURCE_SHA"
+          test "$(jq -r '.version' staging/version.json)" = "$V"
+          test "$(jq -r '.versionCode' staging/version.json)" = '108'
+          test "$(jq -r '.sha256' staging/version.json)" = "$EXPECTED_SHA"
+          test "$(jq -r '.sha256' staging/release.json)" = "$EXPECTED_SHA"
+          test "$(jq -r '.mode' staging/release.json)" = 'verified_unsigned_bundle_delta_v1'
+          test "$(jq -r '.output' staging/release.json)" = "releases/$APP"
+          test "$(jq -r '.unsignedBundleSha256' staging/release.json)" = '80f0880cd7e89bbeba4cbda32b35c7ef95226c16c9ee97ca3b23b56b2147fb0b'
+          test "$(jq -r '.unsignedApkSha256' staging/release.json)" = '081e53e7bb3c1487ed0664209a09550a819ecf28956d0dddf7cacd8fdaed1d18'
+          test "$(jq -r '.patchSha256' staging/release.json)" = 'f4d998c18c919b1ff0031392f98f6463714aeec03b9419777b404420e1139c0c'
+          gh release view v3.0.4 --repo "$GITHUB_REPOSITORY" >/dev/null
+      - name: Reconstruct exact original-key signed APK from verified CI unsigned and byte patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE_URL="$(jq -er '.unsignedBundleUrl' staging/release.json)"
+          case "$BUNDLE_URL" in https://*.oaiusercontent.com/files/*) ;; *) echo 'Unsupported bundle host' >&2; exit 1;; esac
+          curl --fail --silent --show-error --location --retry 2 --connect-timeout 15 --max-time 180 \
+            "$BUNDLE_URL" -o "$RUNNER_TEMP/verified-unsigned-bundle.zip"
+          echo '80f0880cd7e89bbeba4cbda32b35c7ef95226c16c9ee97ca3b23b56b2147fb0b  '"$RUNNER_TEMP/verified-unsigned-bundle.zip" | sha256sum --check -
+          unzip -p "$RUNNER_TEMP/verified-unsigned-bundle.zip" app-release-unsigned.apk > "$RUNNER_TEMP/v306-unsigned.apk"
+          echo '081e53e7bb3c1487ed0664209a09550a819ecf28956d0dddf7cacd8fdaed1d18  '"$RUNNER_TEMP/v306-unsigned.apk" | sha256sum --check -
+          cat staging/chunks/*.b64 | tr -d '\r\n' | base64 --decode > "$RUNNER_TEMP/signed-delta.zst"
+          echo 'f4d998c18c919b1ff0031392f98f6463714aeec03b9419777b404420e1139c0c  '"$RUNNER_TEMP/signed-delta.zst" | sha256sum --check -
+          mkdir -p releases
+          zstd -q -d -f --patch-from="$RUNNER_TEMP/v306-unsigned.apk" "$RUNNER_TEMP/signed-delta.zst" -o "releases/$APP"
+          echo "$EXPECTED_SHA  releases/$APP" | sha256sum --check -
+          unzip -tq "releases/$APP" >/dev/null
+      - name: Publish immutable release asset and independently read back signed bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "v$V" "releases/$APP" --repo "$GITHUB_REPOSITORY" --target main \
+              --title "Yellow Hat Resale v$V" \
+              --notes "Original-key signed Android update, code 108. Source: $SOURCE_SHA. SHA-256: $EXPECTED_SHA. Prior v3.0.4 retained."
+          fi
+          mkdir -p "$RUNNER_TEMP/verified-asset"
+          gh release download "v$V" --repo "$GITHUB_REPOSITORY" --pattern "$APP" --dir "$RUNNER_TEMP/verified-asset"
+          echo "$EXPECTED_SHA  $RUNNER_TEMP/verified-asset/$APP" | sha256sum --check -
+      - name: Promote live version.json on main only after signed asset readback
+        shell: bash
+        run: |
+          set -euo pipefail
+          META=$(gh api "repos/${GITHUB_REPOSITORY}/contents/version.json?ref=main")
+          CURRENT_SHA=$(jq -r '.sha' <<< "$META")
+          CURRENT=$(jq -r '.content' <<< "$META" | tr -d '\n' | base64 --decode)
+          test "$(jq -r '.version' <<< "$CURRENT")" = '3.0.4'
+          test "$(jq -r '.sha256' <<< "$CURRENT")" = '47dd9f168d66e561a37e4b25fd92a43923e39dd2a931fa2e511ebc2c24ebe887'
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${V}/${APP}"
+          jq --arg url "$URL" '.apkUrl=$url' staging/version.json > "$RUNNER_TEMP/promoted-version.json"
+          DATA=$(base64 -w0 "$RUNNER_TEMP/promoted-version.json")
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/version.json" \
+            -f message="Publish verified signed Yellow Hat v3.0.6 Android update" \
+            -f content="$DATA" -f sha="$CURRENT_SHA" -f branch=main >/dev/null
+          AFTER=$(gh api "repos/${GITHUB_REPOSITORY}/contents/version.json?ref=main" --jq .content | tr -d '\n' | base64 --decode)
+          test "$(jq -r '.version' <<< "$AFTER")" = "$V"
+          test "$(jq -r '.versionCode' <<< "$AFTER")" = '108'
+          test "$(jq -r '.sha256' <<< "$AFTER")" = "$EXPECTED_SHA"
+          test "$(jq -r '.sourceSha' <<< "$AFTER")" = "$SOURCE_SHA"
+          test "$(jq -r '.apkUrl' <<< "$AFTER")" = "$URL"
+          gh release view v3.0.4 --repo "$GITHUB_REPOSITORY" >/dev/null
+          echo "PUBLISHED v$V; original signed APK verified; live feed verified; v3.0.4 rollback retained"
