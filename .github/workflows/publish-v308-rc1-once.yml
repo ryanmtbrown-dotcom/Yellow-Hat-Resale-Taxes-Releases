@@ -62,7 +62,7 @@ jobs:
           unzip -p "$RUNNER_TEMP/verified-unsigned-bundle.zip" "$SOURCE" > "releases/$SOURCE"
           jq -r '.sourceZipSha256' staging/v308-rc1/release.json | awk -v f="releases/$SOURCE" '{print $0"  "f}' | sha256sum --check -
           unzip -tq "releases/$SOURCE" >/dev/null
-          test "$(unzip -p "releases/$SOURCE" '*/package.json' | jq -r '.version')" = '3.0.8'
+          test "$(unzip -p "releases/$SOURCE" 'v308rc1-source/package.json' | jq -r '.version')" = '3.0.8'
           test "$(unzip -p "releases/$SOURCE" '*/android/app/build.gradle' | grep -c 'versionCode 110')" = '1'
       - name: Publish GitHub prerelease and independently read back both assets
         shell: bash
