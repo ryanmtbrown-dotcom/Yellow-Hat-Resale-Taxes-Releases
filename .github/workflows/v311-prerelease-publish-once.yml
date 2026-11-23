@@ -1,0 +1,105 @@
+name: Publish Yellow Hat v3.0.11 signed first-phone PRE-RELEASE (single exact APK)
+on:
+  push:
+    branches:
+      - release/v311-first-phone-prerelease-20261123
+    paths:
+      - .github/workflows/v311-prerelease-publish-once.yml
+permissions:
+  contents: write
+concurrency:
+  group: yhr-v311-first-phone-prerelease-one-time
+  cancel-in-progress: false
+jobs:
+  verify-and-publish-signed-apk:
+    if: >-
+      github.repository == 'ryanmtbrown-dotcom/Yellow-Hat-Resale-Taxes-Releases' &&
+      github.event.head_commit.message == 'ci: publish exact signed v3.0.11 first-phone prerelease once'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download and verify previous original-key signed release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/v311-release"
+          gh release download v3.0.10 --repo "$GITHUB_REPOSITORY" --pattern 'Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.10.apk' --dir "$RUNNER_TEMP/v311-release"
+          printf '%s  %s\n' 'e3815fb9ed5a74643112588def04c7f24ec826e462e55e0a0dc1e7054601c4d2' "$RUNNER_TEMP/v311-release/Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.10.apk" | sha256sum --check --status
+      - name: Reconstruct signed v3.0.11 from hash-pinned signed-byte delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .v311-release-staging/chunks/*.b64 | base64 --decode > "$RUNNER_TEMP/v311-release/exact-signed-byte-delta.gz"
+          printf '%s  %s\n' '4080fe9bb6bb4d006cc9815bbfb89fd8225821a91650501f217c7163ea5cf0a4' "$RUNNER_TEMP/v311-release/exact-signed-byte-delta.gz" | sha256sum --check --status
+          python3 - <<'PYVERIFY'
+          import gzip,struct,hashlib,pathlib,os
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'v311-release'
+          old=(root/'Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.10.apk').read_bytes()
+          with gzip.open(root/'exact-signed-byte-delta.gz','rb') as f: b=f.read()
+          marker=b'YHR-APK-DELTA-1\n'
+          if not b.startswith(marker):raise SystemExit('invalid signed delta header')
+          p=len(marker);h0=b[p:p+32];h1=b[p+32:p+64];p+=64
+          if hashlib.sha256(old).digest()!=h0:raise SystemExit('original signed APK digest mismatch')
+          length=struct.unpack_from('<I',b,p)[0];p+=4
+          result=bytearray()
+          while True:
+           code=b[p];p+=1
+           if code==255:break
+           if code==0:
+            start,n=struct.unpack_from('<II',b,p);p+=8
+            if start+n>len(old):raise SystemExit('invalid original-reference extent')
+            result.extend(old[start:start+n])
+           elif code==1:
+            n=struct.unpack_from('<I',b,p)[0];p+=4
+            if p+n>len(b):raise SystemExit('invalid inserted-byte extent')
+            result.extend(b[p:p+n]);p+=n
+           else:raise SystemExit('unknown signed delta instruction')
+          if p!=len(b) or len(result)!=length or hashlib.sha256(result).digest()!=h1:
+           raise SystemExit('signed APK reconstruction digest mismatch')
+          target=root/'Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.11.apk'
+          target.write_bytes(result)
+          print('Reconstructed exact signed v3.0.11 target SHA-256:',hashlib.sha256(result).hexdigest())
+          PYVERIFY
+          printf '%s  %s\n' 'b0f690724acf511a2ba522d0aade7034e917b68f486b18b2ea305dde2c54d148' "$RUNNER_TEMP/v311-release/Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.11.apk" | sha256sum --check --status
+      - name: Verify signed APK application ID, Android version and original signer
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$RUNNER_TEMP/v311-release/Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.11.apk"
+          unzip -tq "$apk" >/dev/null
+          if [ ! -f "${ANDROID_HOME}/build-tools/35.0.0/lib/apksigner.jar" ]; then
+            SDKMANAGER="$(find "${ANDROID_HOME}/cmdline-tools" -type f -name sdkmanager -perm -111 | sort -V | tail -n 1)"
+            test -n "$SDKMANAGER"
+            yes | "$SDKMANAGER" --licenses >/dev/null || true
+            "$SDKMANAGER" 'build-tools;35.0.0'
+          fi
+          java -jar "${ANDROID_HOME}/build-tools/35.0.0/lib/apksigner.jar" verify --verbose --print-certs "$apk" > "$RUNNER_TEMP/v311-release/signature.txt"
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' "$RUNNER_TEMP/v311-release/signature.txt"
+          grep -Fq 'Signer #1 certificate SHA-256 digest: 48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4' "$RUNNER_TEMP/v311-release/signature.txt"
+          "${ANDROID_HOME}/build-tools/35.0.0/aapt" dump badging "$apk" > "$RUNNER_TEMP/v311-release/badging.txt"
+          grep -Eq "package: name='com.yellowhatresale.taxes' versionCode='113' versionName='3.0.11'" "$RUNNER_TEMP/v311-release/badging.txt"
+          if unzip -l "$apk" | grep -E '\.jks$|PASSWORD.txt|signing-private';then echo 'Private signing material found' >&2;exit 1;fi
+      - name: Publish v3.0.11 strictly as a PRE-RELEASE; leave stable updater feed unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$RUNNER_TEMP/v311-release/Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.11.apk"
+          if gh release view v3.0.11 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'v3.0.11 already exists; refuse to overwrite' >&2
+            exit 1
+          fi
+          gh release create v3.0.11 "$apk" --repo "$GITHUB_REPOSITORY" --prerelease --title 'Yellow Hat Resale v3.0.11 — FIRST-PHONE TEST PRERELEASE' --notes 'FIRST-PHONE PRERELEASE: Signed Android update versionCode 113 over 3.0.10, original certificate. This prerelease has not been validated on physical phones and DOES NOT establish successful V2 synchronization. WARNING: existing Android Keystore credentials may not be readable after in-place installation until first-phone credential rewrap is completed and verified; do not uninstall or clear the old app data. Current shared-cloud V2 routes have not been confirmed deployed. The second phone is intentionally unchanged. Signed APK SHA-256: b0f690724acf511a2ba522d0aade7034e917b68f486b18b2ea305dde2c54d148. This prerelease does not modify the stable version.json updater feed.'
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v3.0.11" --jq '.prerelease')" = true
+          mkdir -p "$RUNNER_TEMP/v311-release/readback"
+          gh release download v3.0.11 --repo "$GITHUB_REPOSITORY" --pattern 'Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.11.apk' --dir "$RUNNER_TEMP/v311-release/readback"
+          printf '%s  %s\n' 'b0f690724acf511a2ba522d0aade7034e917b68f486b18b2ea305dde2c54d148' "$RUNNER_TEMP/v311-release/readback/Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.11.apk" | sha256sum --check --status
+          echo 'Public GitHub v3.0.11 PRE-RELEASE signed APK readback verified. Stable feed remains untouched.'
