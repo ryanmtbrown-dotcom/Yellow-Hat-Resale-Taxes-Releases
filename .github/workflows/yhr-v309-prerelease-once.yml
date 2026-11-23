@@ -1,0 +1,99 @@
+name: Yellow Hat v3.0.9 controlled conflict recovery prerelease (one-time)
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/yhr-v309-prerelease-once.yml]
+permissions:
+  contents: write
+concurrency:
+  group: yellow-hat-v309-publish-once
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      FILENAME: Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.9.apk
+      EXPECTED: 7f12af396d7a4fcb9dee12394e50603467be08cbe5d3b1a06a30c0a0a75e0d87
+      CERT: 48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4
+    steps:
+      - name: Reconstruct the exact originally signed APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > "$RUNNER_TEMP/apk.b64"
+          for sha in ac7ccb7ac3958eaee0e9488f0e85418b021a11da e170f2397871acafd381318b7ad257be206ba089 9a9363d4930bc1696375a172579e4d560c37c1a8 fc6120f768e597e9035986d716d524febff576d9; do
+            gh api "/repos/$GITHUB_REPOSITORY/git/blobs/$sha" --jq '.content' | tr -d '\n' | base64 -d >> "$RUNNER_TEMP/apk.b64"
+          done
+          base64 -d "$RUNNER_TEMP/apk.b64" > "$RUNNER_TEMP/$FILENAME"
+          test "$(stat -c %s "$RUNNER_TEMP/$FILENAME")" = 7441263
+          echo "$EXPECTED  $RUNNER_TEMP/$FILENAME" | sha256sum -c -
+      - name: Verify APK original signature and version; refuse mismatches
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar="$(find "$ANDROID_HOME/build-tools" -path '*/lib/apksigner.jar' -type f | sort -V | tail -n1)"
+          test -n "$jar"
+          java -jar "$jar" verify --verbose --print-certs "$RUNNER_TEMP/$FILENAME" > "$RUNNER_TEMP/signature.txt"
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' "$RUNNER_TEMP/signature.txt"
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' "$RUNNER_TEMP/signature.txt"
+          grep -iq "$CERT" "$RUNNER_TEMP/signature.txt"
+          python3 - "$RUNNER_TEMP/$FILENAME" <<'PY'
+          import sys,struct,zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              assert z.testzip() is None
+              m=z.read('AndroidManifest.xml')
+              assert m.count('3.0.9'.encode('utf-16le'))==1
+              i=8
+              while i<len(m):
+                  kind,hs,size=struct.unpack_from('<HHI',m,i)
+                  if kind==0x102:
+                      st,step,count=struct.unpack_from('<HHH',m,i+24)
+                      assert struct.unpack_from('<I',m,i+16+st+16)[0]==111
+                      break
+                  i+=size
+              else: raise AssertionError('Missing manifest')
+              assert b'EMERGENCY_ADDITIONAL_V2_PAUSED=false' in z.read('assets/www/src/app/sync/emergency-v2-release-gate.js')
+              assert b"version: '3.0.9'" in z.read('assets/www/src/config/app-metadata.js')
+              assert b'com.yellowhatresale.taxes' in m
+              assert 'assets/www/src/app/sync/operational-v2-conflict-diagnostic.js' in z.namelist()
+          PY
+      - name: Publish prerelease only, verify downloaded asset and unchanged update feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v3.0.9 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Release exists; refusing to overwrite' >&2; exit 1
+          fi
+          gh api "/repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" --jq '.content' | base64 -d > "$RUNNER_TEMP/feed-before.json"
+          python3 - "$RUNNER_TEMP/feed-before.json" <<'PY'
+          import sys,json
+          x=json.load(open(sys.argv[1])); assert x['version']=='3.0.7' and x['versionCode']==109
+          PY
+          cat > "$RUNNER_TEMP/notes.md" <<'EOF'
+          Controlled prerelease v3.0.9 / code111 — conflict review and recovery only.
+          - Repairs Orders and Pull Lists held conflict inspection even when the matching pending edit is missing.
+          - Provides readable Order stage review, verified orphan recovery, status correction and copyable privacy-safe troubleshooting details.
+          - Preserves all 18 V2 owners, operational data, Android package identity and original signing certificate.
+          - Source verification: 2,938 passed, 0 failed, 5 intentional skips; focused release tests: 26 passed.
+          - Physical two-phone acceptance is pending; test on secondary first. Do not uninstall the existing app.
+          - Production update feed unchanged. No database migration or Worker deployment.
+          EOF
+          gh release create v3.0.9 "$RUNNER_TEMP/$FILENAME" --repo "$GITHUB_REPOSITORY" --prerelease --target "$GITHUB_SHA" --title 'Yellow Hat Resale v3.0.9 — Conflict Recovery (Controlled Prerelease)' --notes-file "$RUNNER_TEMP/notes.md"
+          gh api "/repos/$GITHUB_REPOSITORY/releases/tags/v3.0.9" --jq '[.prerelease,.draft,(.assets|length)]' | grep -Fx '[true,false,1]'
+          mkdir -p "$RUNNER_TEMP/readback"
+          gh release download v3.0.9 --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/readback" --pattern "$FILENAME"
+          echo "$EXPECTED  $RUNNER_TEMP/readback/$FILENAME" | sha256sum -c -
+          gh api "/repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" --jq '.content' | base64 -d > "$RUNNER_TEMP/feed-after.json"
+          cmp "$RUNNER_TEMP/feed-before.json" "$RUNNER_TEMP/feed-after.json"
+      - name: Remove temporary release workflow branch
+        if: success()
+        shell: bash
+        run: gh api -X DELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/prerelease/v309-conflict-recovery-20261122" || true
+      - name: Retire one-time publisher from main
+        if: success()
+        shell: bash
+        run: |
+          sha="$(gh api "/repos/$GITHUB_REPOSITORY/contents/.github/workflows/yhr-v309-prerelease-once.yml?ref=main" --jq '.sha')"
+          gh api -X DELETE "/repos/$GITHUB_REPOSITORY/contents/.github/workflows/yhr-v309-prerelease-once.yml" -f message='Retire completed one-time v3.0.9 publisher' -f sha="$sha" -f branch=main
