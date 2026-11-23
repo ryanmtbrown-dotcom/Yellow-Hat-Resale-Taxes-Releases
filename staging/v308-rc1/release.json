@@ -1,0 +1,13 @@
+{
+  "code": 110,
+  "mode": "signed_apk_delta_prerelease_v1",
+  "patchSha256": "50d58a8b5c6268bed328f724b0f3427e773b25ec5c8ad2272225baf9e201a533",
+  "signedApkSha256": "890a6bce36948e2bf6a6948d78099a55641b17e1fb26d31dec6c9ee2cca02562",
+  "sourceRun": 45107653045,
+  "sourceRunSha": "ed3bc86479a40969474cee5cc29dd07f611da3d7",
+  "sourceZipSha256": "2d76a0cc1372ff8eb98cc5e87ad78fdcb6d06619c427ccdd3bee5507e2d549e7",
+  "unsignedApkSha256": "ee75c69981191ca1c9b2e97430bf71e7b9cfe6716739639c68e3e51e4beab62c",
+  "unsignedBundleSha256": "6996b7074b94d3e0b60f79184bbda9d1958b46d9ef35a8ca8c468ba11febfc18",
+  "unsignedBundleUrl": "https://sdmntprsoutheastus3.oaiusercontent.com/files/00000000-88c0-820c-acc3-112e86af9800/raw?se=2026-11-23T03%3A54%3A25Z&sp=r&sv=2026-06-06&sr=b&scid=ec168add-00ec-5a48-b124-46bb5ea5b2e3&skoid=1a0ef048-201c-43e0-8950-52d58956a71a&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-11-23T01%3A53%3A27Z&ske=2026-11-24T01%3A53%3A27Z&sks=b&skv=2026-06-06&sig=vES/CPevl9UP5OLBiGwrwYlmAU6S2e5ZC5AMeqTcQ9M%3D",
+  "version": "3.0.8"
+}
