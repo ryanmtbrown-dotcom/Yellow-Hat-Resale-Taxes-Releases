@@ -1,0 +1,108 @@
+name: Yellow Hat v3.0.14 signed verified public release (one-time)
+on:
+  push:
+    branches:
+      - release/v314-public-one-time-20261124
+    paths:
+      - .github/workflows/v314-publish-public-once.yml
+permissions:
+  contents: write
+concurrency:
+  group: v314-signed-public-once
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: >-
+      github.repository == 'ryanmtbrown-dotcom/Yellow-Hat-Resale-Taxes-Releases' &&
+      github.event.head_commit.message == 'release: verified signed v3.0.14 public updater (one time)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare signed APK verifier and reconstruct exact signed bytes
+        shell: bash
+        env:
+          UNSIGNED_BUNDLE_URL: 'https://sdmntpreastus3.oaiusercontent.com/files/00000000-ff54-8212-9c7a-6a96a8d7291e/raw?se=2026-11-24T02%3A51%3A57Z&sp=r&sv=2026-06-06&sr=b&scid=337f6fe6-9e45-5665-bb5a-d23f4555f4a7&skoid=1a0ef048-201c-43e0-8950-52d58956a71a&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-11-24T02%3A08%3A46Z&ske=2026-11-25T02%3A08%3A46Z&sks=b&skv=2026-06-06&sig=uvfaQ/KMmcoWOI0VpdPsNeGh0LKFi7yVo/70ZaIBMI0%3D'
+        run: |
+          set -euo pipefail
+          SOURCE_SHA='401597e0ca4c3d5a4488d3b2bce599bc3283c27d'
+          META='.v314-signed-stage/manifest.json'
+          test -s "$META"
+          test "$(jq -er .version "$META")" = '3.0.14'
+          test "$(jq -er .versionCode "$META")" = '116'
+          test "$(jq -er .sourceSha "$META")" = "$SOURCE_SHA"
+          test "$(jq -er .sourceBuildRun "$META")" = '45314365234'
+          test "$(jq -er .versionCode version.json)" -lt 116
+          EXPECT_BUNDLE="$(jq -er .unsignedBundleSha256 "$META")"
+          EXPECT_UNSIGNED="$(jq -er .unsignedApkSha256 "$META")"
+          EXPECT_PATCH="$(jq -er .patchSha256 "$META")"
+          EXPECT_SIGNED="$(jq -er .signedApkSha256 "$META")"
+          EXPECT_CERT="$(jq -er .signingCertificateSha256 "$META")"
+          test "$EXPECT_CERT" = '48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4'
+          test "$EXPECT_SIGNED" = 'e9b88611aaee7495eecf81aa1aecf798f67076dd58153bee7b95350ab78b3321'
+          NAME='Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.14.apk'
+          test "$(jq -er .artifact "$META")" = "$NAME"
+          case "$UNSIGNED_BUNDLE_URL" in https://*.oaiusercontent.com/files/*) ;; *) echo 'Unapproved bundle host'; exit 1;; esac
+          curl -fSsL --retry 2 --connect-timeout 15 --max-time 150 "$UNSIGNED_BUNDLE_URL" -o /tmp/yhr-v314-unsigned-bundle.zip
+          echo "$EXPECT_BUNDLE  /tmp/yhr-v314-unsigned-bundle.zip" | sha256sum --check
+          unzip -p /tmp/yhr-v314-unsigned-bundle.zip app-release-unsigned.apk > /tmp/yhr-v314-unsigned.apk
+          echo "$EXPECT_UNSIGNED  /tmp/yhr-v314-unsigned.apk" | sha256sum --check
+          base64 -d .v314-signed-stage/signed-delta.b64 > /tmp/yhr-v314-signed-delta.zst
+          echo "$EXPECT_PATCH  /tmp/yhr-v314-signed-delta.zst" | sha256sum --check
+          command -v zstd >/dev/null
+          mkdir -p releases
+          zstd --patch-from=/tmp/yhr-v314-unsigned.apk -d -q -f /tmp/yhr-v314-signed-delta.zst -o "releases/$NAME"
+          echo "$EXPECT_SIGNED  releases/$NAME" | sha256sum --check
+          test "$(stat -c '%s' "releases/$NAME")" = "$(jq -er .signedApkSize "$META")"
+          unzip -tq "releases/$NAME" >/dev/null
+          if [ ! -f "${ANDROID_HOME}/build-tools/35.0.0/apksigner" ]; then
+            sdkmanager_path="$(find "${ANDROID_HOME}/cmdline-tools" -type f -name sdkmanager -perm -111 | sort -V | tail -n 1)"
+            test -n "$sdkmanager_path"
+            "$sdkmanager_path" 'build-tools;35.0.0'
+          fi
+          "${ANDROID_HOME}/build-tools/35.0.0/zipalign" -c -v 4 "releases/$NAME" >/dev/null
+          "${ANDROID_HOME}/build-tools/35.0.0/aapt" dump badging "releases/$NAME" > /tmp/yhr-v314-badging.txt
+          grep -Eq "package: name='com.yellowhatresale.taxes' versionCode='116' versionName='3.0.14'" /tmp/yhr-v314-badging.txt
+          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --verbose --print-certs "releases/$NAME" > /tmp/yhr-v314-signature.txt
+          grep -Fiq "$EXPECT_CERT" /tmp/yhr-v314-signature.txt
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/yhr-v314-signature.txt
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/yhr-v314-signature.txt
+          gh --version >/dev/null
+          echo 'PASS: v3.0.14 unsigned CI provenance, patch and original-key signed APK validated.'
+      - name: Publish signed public release and independently verify before promoting updater
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          NAME='Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.14.apk'
+          SOURCE_SHA='401597e0ca4c3d5a4488d3b2bce599bc3283c27d'
+          EXPECT_SIGNED='e9b88611aaee7495eecf81aa1aecf798f67076dd58153bee7b95350ab78b3321'
+          echo "$EXPECT_SIGNED  releases/$NAME" | sha256sum --check
+          gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" > /tmp/yhr-prev-feed-api.json
+          PREV_BLOB="$(jq -er .sha /tmp/yhr-prev-feed-api.json)"
+          test "$PREV_BLOB" = '8762483188a16a6d61a06462e376b2c89dc6b5a8'
+          jq -er .content /tmp/yhr-prev-feed-api.json | base64 -d > /tmp/yhr-prev-feed.json
+          test "$(jq -er .version /tmp/yhr-prev-feed.json)" = '3.0.13'
+          test "$(jq -er .versionCode /tmp/yhr-prev-feed.json)" = '115'
+          test "$(jq -er .sha256 /tmp/yhr-prev-feed.json)" = 'e0b4355386bcf20e45bc2e80b5288b6f69f560216004d12a2f216ad21a196030'
+          gh release view v3.0.13 --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release view v3.0.12 --repo "$GITHUB_REPOSITORY" >/dev/null
+          if ! gh release view v3.0.14 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create v3.0.14 "releases/$NAME" --repo "$GITHUB_REPOSITORY" --target main --title 'Yellow Hat Resale v3.0.14' --notes "Owner-authorized diagnostic testing release. Original signing key verified. Exact source SHA $SOURCE_SHA. APK SHA-256 $EXPECT_SIGNED. Startup authority guard and existing V2 business phone reconnect repair. Physical two-phone validation pending. Prior releases retained."
+          fi
+          test "$(gh release view v3.0.14 --repo "$GITHUB_REPOSITORY" --json isPrerelease,isDraft --jq '.isPrerelease or .isDraft')" = 'false'
+          mkdir -p "$RUNNER_TEMP/readback"
+          gh release download v3.0.14 --repo "$GITHUB_REPOSITORY" --pattern "$NAME" --dir "$RUNNER_TEMP/readback"
+          echo "$EXPECT_SIGNED  $RUNNER_TEMP/readback/$NAME" | sha256sum --check
+          echo 'PASS public release asset downloaded and verified before updater promotion'
+          APK_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/v3.0.14/$NAME"
+          jq -n --arg product 'Yellow Hat Resale Inventory and Taxes' --arg version '3.0.14' --argjson versionCode 116 --arg apkUrl "$APK_URL" --arg sha256 "$EXPECT_SIGNED" --arg sourceSha "$SOURCE_SHA" --arg publishedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{product:$product,version:$version,versionCode:$versionCode,apkUrl:$apkUrl,sha256:$sha256,sourceSha:$sourceSha,publishedAt:$publishedAt}' > /tmp/yhr-new-feed.json
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/version.json" -f message='Publish verified Android v3.0.14 and update feed' -f branch=main -f sha="$PREV_BLOB" -f content="$(base64 -w0 /tmp/yhr-new-feed.json)" > /tmp/yhr-feed-update.json
+          gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" | jq -er .content | base64 -d > /tmp/yhr-live-feed.json
+          cmp /tmp/yhr-new-feed.json /tmp/yhr-live-feed.json
+          gh release view v3.0.13 --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release view v3.0.12 --repo "$GITHUB_REPOSITORY" >/dev/null
+          echo 'PUBLISHED v3.0.14: exact signed public asset and updater feed independently verified; rollback releases retained'
