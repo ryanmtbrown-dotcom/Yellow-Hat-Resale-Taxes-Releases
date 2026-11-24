@@ -1,9 +1,9 @@
 {
   "product": "Yellow Hat Resale Inventory and Taxes",
-  "version": "3.0.18",
-  "versionCode": 120,
-  "apkUrl": "https://github.com/ryanmtbrown-dotcom/Yellow-Hat-Resale-Taxes-Releases/releases/download/v3.0.18/Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.18.apk",
-  "sha256": "42369881fcd3809d43595a6c88ad63bc9ba76f7ee9f314400eaed51bfa05b07a",
-  "sourceSha": "53e09da5883f62351d5d98d5ed680a7d92f45fa0",
-  "publishedAt": "2026-11-24T05:06:52Z"
+  "version": "3.0.19",
+  "versionCode": 121,
+  "apkUrl": "https://github.com/ryanmtbrown-dotcom/Yellow-Hat-Resale-Taxes-Releases/releases/download/v3.0.19/Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.19.apk",
+  "sha256": "8837593e24ff3ecd3def2088ea8125b80ac822f6ae65b5519183359ecf68f63f",
+  "sourceSha": "67821ffb75ec6619c95f953f27f4c8037c49eb41",
+  "publishedAt": "2026-11-24T05:42:21Z"
 }
