@@ -1,0 +1,36 @@
+name: Verify v3.0.19 public updater delivery
+on:
+  push:
+    branches: [release/v319-public-one-time-20261124]
+    paths: [.github/workflows/v319-verify-raw-feed-once.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.event.head_commit.message == 'verify: v3.0.19 public updater read-only'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Confirm public feed and APK without authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="$GITHUB_REPOSITORY"
+          EXPECT='8837593e24ff3ecd3def2088ea8125b80ac822f6ae65b5519183359ecf68f63f'
+          URL="https://github.com/$REPO/releases/download/v3.0.19/Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.19.apk"
+          curl -fsSL --retry 2 "$URL" -o /tmp/yhr.apk
+          echo "$EXPECT  /tmp/yhr.apk" | sha256sum -c
+          curl -fsSL -H 'Accept: application/vnd.github.raw+json' "https://api.github.com/repos/$REPO/contents/version.json?ref=main" -o /tmp/api.json
+          jq -e --arg sha "$EXPECT" --arg url "$URL" '.version=="3.0.19" and .versionCode==121 and .sha256==$sha and .apkUrl==$url' /tmp/api.json
+          for attempt in $(seq 1 36); do
+            if curl -fsSL --max-time 10 -D /tmp/headers -H 'Cache-Control: no-cache, no-store, max-age=0' "https://raw.githubusercontent.com/$REPO/main/version.json?check=$(date +%s%3N)" -o /tmp/raw.json; then
+              jq -c '{version,versionCode,sha256}' /tmp/raw.json || true
+              if jq -e --arg sha "$EXPECT" --arg url "$URL" '.version=="3.0.19" and .versionCode==121 and .sha256==$sha and .apkUrl==$url' /tmp/raw.json; then
+                echo 'PASS: exact unauthenticated phone update URL returns v3.0.19; public APK verified'
+                exit 0
+              fi
+              grep -Ei '^(age|x-cache|cache-control|etag|date):' /tmp/headers || true
+            fi
+            sleep 5
+          done
+          exit 1
