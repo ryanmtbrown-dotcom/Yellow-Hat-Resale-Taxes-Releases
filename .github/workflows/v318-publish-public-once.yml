@@ -1,0 +1,108 @@
+name: Yellow Hat v3.0.18 signed verified public release (one-time)
+on:
+  push:
+    branches:
+      - release/v318-public-one-time-20261124
+    paths:
+      - .github/workflows/v318-publish-public-once.yml
+permissions:
+  contents: write
+concurrency:
+  group: v318-signed-public-once
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: >-
+      github.repository == 'ryanmtbrown-dotcom/Yellow-Hat-Resale-Taxes-Releases' &&
+      github.event.head_commit.message == 'release: verified signed v3.0.18 public updater (one time)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare signed APK verifier and reconstruct exact signed bytes
+        shell: bash
+        env:
+          UNSIGNED_BUNDLE_URL: 'https://sdmntprwestus3.oaiusercontent.com/files/00000000-6b18-81fd-94d0-ffa18d872a08/raw?se=2026-11-24T05%3A10%3A38Z&sp=r&sv=2026-06-06&sr=b&scid=fea9af5e-cc45-5fb3-840e-99ac7b5ddba6&skoid=1a0ef048-201c-43e0-8950-52d58956a71a&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-11-24T01%3A59%3A42Z&ske=2026-11-25T01%3A59%3A42Z&sks=b&skv=2026-06-06&sig=IrUUb4/LQovYbWy/A5Xw%2Bf7caaq3n9D3tdck9/fEeR0%3D'
+        run: |
+          set -euo pipefail
+          SOURCE_SHA='53e09da5883f62351d5d98d5ed680a7d92f45fa0'
+          META='.v318-signed-stage/manifest.json'
+          test -s "$META"
+          test "$(jq -er .version "$META")" = '3.0.18'
+          test "$(jq -er .versionCode "$META")" = '120'
+          test "$(jq -er .sourceSha "$META")" = "$SOURCE_SHA"
+          test "$(jq -er .sourceBuildRun "$META")" = '45330367843'
+          test "$(jq -er .versionCode version.json)" -lt 120
+          EXPECT_BUNDLE="$(jq -er .unsignedBundleSha256 "$META")"
+          EXPECT_UNSIGNED="$(jq -er .unsignedApkSha256 "$META")"
+          EXPECT_PATCH="$(jq -er .patchSha256 "$META")"
+          EXPECT_SIGNED="$(jq -er .signedApkSha256 "$META")"
+          EXPECT_CERT="$(jq -er .signingCertificateSha256 "$META")"
+          test "$EXPECT_CERT" = '48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4'
+          test "$EXPECT_SIGNED" = '42369881fcd3809d43595a6c88ad63bc9ba76f7ee9f314400eaed51bfa05b07a'
+          NAME='Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.18.apk'
+          test "$(jq -er .artifact "$META")" = "$NAME"
+          case "$UNSIGNED_BUNDLE_URL" in https://*.oaiusercontent.com/files/*) ;; *) echo 'Unapproved bundle host'; exit 1;; esac
+          curl -fSsL --retry 2 --connect-timeout 15 --max-time 150 "$UNSIGNED_BUNDLE_URL" -o /tmp/yhr-v318-unsigned-bundle.zip
+          echo "$EXPECT_BUNDLE  /tmp/yhr-v318-unsigned-bundle.zip" | sha256sum --check
+          unzip -p /tmp/yhr-v318-unsigned-bundle.zip app-release-unsigned.apk > /tmp/yhr-v318-unsigned.apk
+          echo "$EXPECT_UNSIGNED  /tmp/yhr-v318-unsigned.apk" | sha256sum --check
+          base64 -d .v318-signed-stage/signed-delta.b64 > /tmp/yhr-v318-signed-delta.zst
+          echo "$EXPECT_PATCH  /tmp/yhr-v318-signed-delta.zst" | sha256sum --check
+          command -v zstd >/dev/null
+          mkdir -p releases
+          zstd --patch-from=/tmp/yhr-v318-unsigned.apk -d -q -f /tmp/yhr-v318-signed-delta.zst -o "releases/$NAME"
+          echo "$EXPECT_SIGNED  releases/$NAME" | sha256sum --check
+          test "$(stat -c '%s' "releases/$NAME")" = "$(jq -er .signedApkSize "$META")"
+          unzip -tq "releases/$NAME" >/dev/null
+          if [ ! -f "${ANDROID_HOME}/build-tools/35.0.0/apksigner" ]; then
+            sdkmanager_path="$(find "${ANDROID_HOME}/cmdline-tools" -type f -name sdkmanager -perm -111 | sort -V | tail -n 1)"
+            test -n "$sdkmanager_path"
+            "$sdkmanager_path" 'build-tools;35.0.0'
+          fi
+          "${ANDROID_HOME}/build-tools/35.0.0/zipalign" -c -v 4 "releases/$NAME" >/dev/null
+          "${ANDROID_HOME}/build-tools/35.0.0/aapt" dump badging "releases/$NAME" > /tmp/yhr-v318-badging.txt
+          grep -Eq "package: name='com.yellowhatresale.taxes' versionCode='120' versionName='3.0.18'" /tmp/yhr-v318-badging.txt
+          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --verbose --print-certs "releases/$NAME" > /tmp/yhr-v318-signature.txt
+          grep -Fiq "$EXPECT_CERT" /tmp/yhr-v318-signature.txt
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/yhr-v318-signature.txt
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/yhr-v318-signature.txt
+          gh --version >/dev/null
+          echo 'PASS: v3.0.18 unsigned CI provenance, patch and original-key signed APK validated.'
+      - name: Publish signed public release and independently verify before promoting updater
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          NAME='Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.18.apk'
+          SOURCE_SHA='53e09da5883f62351d5d98d5ed680a7d92f45fa0'
+          EXPECT_SIGNED='42369881fcd3809d43595a6c88ad63bc9ba76f7ee9f314400eaed51bfa05b07a'
+          echo "$EXPECT_SIGNED  releases/$NAME" | sha256sum --check
+          gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" > /tmp/yhr-prev-feed-api.json
+          PREV_BLOB="$(jq -er .sha /tmp/yhr-prev-feed-api.json)"
+          test "$PREV_BLOB" = '088ff57328101ae3ab69552e19621cf660fd533f'
+          jq -er .content /tmp/yhr-prev-feed-api.json | base64 -d > /tmp/yhr-prev-feed.json
+          test "$(jq -er .version /tmp/yhr-prev-feed.json)" = '3.0.17'
+          test "$(jq -er .versionCode /tmp/yhr-prev-feed.json)" = '119'
+          test "$(jq -er .sha256 /tmp/yhr-prev-feed.json)" = '56ba41defad3f0f1065995e2b47afdf4fa0b59d27d6b47a837f1d4d88280ae73'
+          gh release view v3.0.17 --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release view v3.0.16 --repo "$GITHUB_REPOSITORY" >/dev/null
+          if ! gh release view v3.0.18 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create v3.0.18 "releases/$NAME" --repo "$GITHUB_REPOSITORY" --target main --title 'Yellow Hat Resale v3.0.18' --notes "Owner-authorized diagnostic testing release. Original signing key verified. Exact source SHA $SOURCE_SHA. APK SHA-256 $EXPECT_SIGNED. Shared idle generation polling, bounded outage circuit breaker, persistent connection and adapter diagnostics, preserved current records and pairing. Worker updated. D1 additive index migration pending provider quota reset. Physical two-phone validation pending. Prior releases retained."
+          fi
+          test "$(gh release view v3.0.18 --repo "$GITHUB_REPOSITORY" --json isPrerelease,isDraft --jq '.isPrerelease or .isDraft')" = 'false'
+          mkdir -p "$RUNNER_TEMP/readback"
+          gh release download v3.0.18 --repo "$GITHUB_REPOSITORY" --pattern "$NAME" --dir "$RUNNER_TEMP/readback"
+          echo "$EXPECT_SIGNED  $RUNNER_TEMP/readback/$NAME" | sha256sum --check
+          echo 'PASS public release asset downloaded and verified before updater promotion'
+          APK_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/v3.0.18/$NAME"
+          jq -n --arg product 'Yellow Hat Resale Inventory and Taxes' --arg version '3.0.18' --argjson versionCode 120 --arg apkUrl "$APK_URL" --arg sha256 "$EXPECT_SIGNED" --arg sourceSha "$SOURCE_SHA" --arg publishedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{product:$product,version:$version,versionCode:$versionCode,apkUrl:$apkUrl,sha256:$sha256,sourceSha:$sourceSha,publishedAt:$publishedAt}' > /tmp/yhr-new-feed.json
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/version.json" -f message='Publish verified Android v3.0.18 and update feed' -f branch=main -f sha="$PREV_BLOB" -f content="$(base64 -w0 /tmp/yhr-new-feed.json)" > /tmp/yhr-feed-update.json
+          gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" | jq -er .content | base64 -d > /tmp/yhr-live-feed.json
+          cmp /tmp/yhr-new-feed.json /tmp/yhr-live-feed.json
+          gh release view v3.0.17 --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release view v3.0.16 --repo "$GITHUB_REPOSITORY" >/dev/null
+          echo 'PUBLISHED v3.0.18: exact signed public asset and updater feed independently verified; rollback releases retained'
