@@ -1,0 +1,12 @@
+{
+  "artifact": "Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.34.apk",
+  "unsignedBundleSha256": "04cb86dba1d9ab04f1db15d76a7647213e699846e64875bd59c0250d6c383031",
+  "unsignedApkSha256": "3bcfdecbca4ead5146b45763681d501517a178f3314393f002672049d3fe21fc",
+  "patchSha256": "2ab6afb7079e8f2ffd488253dbe94f53e8915c94e8dd57c976238cbb6ca81376",
+  "signedApkSha256": "d12579f6fe5792a29c171c84e70927a8fdbf6b09889d8b025010b8b4e4ae060f",
+  "signedApkSize": 7480410,
+  "sourceSha": "b399abf2af54306012435e4b693ab754ad1bc1e5",
+  "version": "3.0.34",
+  "versionCode": 136,
+  "webAssetCount": 447
+}
