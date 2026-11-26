@@ -52,7 +52,7 @@ jobs:
           SDK="$ANDROID_HOME/build-tools/35.0.0"
           if [ ! -x "$SDK/apksigner" ]; then sdkmanager 'build-tools;35.0.0'; fi
           "$SDK/zipalign" -c -v 4 "$A" > /tmp/align.txt
-          "$SDK/aapt" dump badging "$A" | grep -F "package: name='com.yellowhatresale.taxes' versionCode='144' versionName='3.0.41'"
+          "$SDK/aapt" dump badging "$A" | grep -F "package: name='com.yellowhatresale.taxes' versionCode='144' versionName='3.0.42'"
           "$SDK/apksigner" verify --verbose --print-certs "$A" | tee /tmp/sign.txt
           grep -F 'Signer #1 certificate SHA-256 digest: 48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4' /tmp/sign.txt
           grep -F 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/sign.txt
@@ -106,7 +106,7 @@ jobs:
           echo "$HASH  /tmp/public.apk" | sha256sum -c
           PUB=$(gh release view v3.0.42 --repo "$GITHUB_REPOSITORY" --json publishedAt --jq .publishedAt)
           test -n "$PUB"
-          jq --arg publishedAt "$PUB" --arg url "$URL" --arg hash "$HASH" --arg source 'f3284e578bfb9673617a6bd7f3770c9914c642c2' '.version="3.0.41" | .versionCode=144 | .apkUrl=$url | .sha256=$hash | .sourceSha=$source | .publishedAt=$publishedAt' /tmp/old-feed.json > /tmp/new-feed.json
+          jq --arg publishedAt "$PUB" --arg url "$URL" --arg hash "$HASH" --arg source 'f3284e578bfb9673617a6bd7f3770c9914c642c2' '.version="3.0.42" | .versionCode=144 | .apkUrl=$url | .sha256=$hash | .sourceSha=$source | .publishedAt=$publishedAt' /tmp/old-feed.json > /tmp/new-feed.json
           cat /tmp/new-feed.json
           gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/version.json" -f message='Publish verified v3.0.42 update feed' -f branch=main -f sha="$PREV" -f content="$(base64 -w0 /tmp/new-feed.json)" >/tmp/update.json
           gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" --jq .content | base64 -d > /tmp/api-feed.json
