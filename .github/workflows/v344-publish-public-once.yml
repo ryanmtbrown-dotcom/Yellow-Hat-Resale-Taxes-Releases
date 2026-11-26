@@ -1,0 +1,108 @@
+name: Publish verified v3.0.44
+on:
+  push:
+    branches: [release/v344-public-one-time-20261126]
+    paths: [.github/workflows/v344-publish-public-once.yml]
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: >-
+      github.event.head_commit.message == 'release: verified signed v3.0.44 public updater (one time)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Reconstruct and verify exact signed APK
+        env:
+          BUNDLE_URL: 'https://sdmntprwestus3.oaiusercontent.com/files/00000000-854c-81fd-870a-6347034d2da5/raw?se=2026-11-26T18%3A51%3A13Z&sp=r&sv=2026-06-06&sr=b&scid=cf9367af-7faf-5cce-973a-fe646704544e&skoid=1a0ef048-201c-43e0-8950-52d58956a71a&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-11-25T22%3A44%3A38Z&ske=2026-11-26T22%3A44%3A38Z&sks=b&skv=2026-06-06&sig=T7nMGNOjxews2PjVsxkr8e6%2BeUL5FTunKH5LqPXr134%3D'
+        run: |
+          set -euo pipefail
+          mkdir -p .release-staging
+          printf '%s\n' '{"artifact":"Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.44.apk","unsignedBundleSha256":"4aab330a3786b7173f0932f69100d5e19f8d27c27edb40a49f40a7bc32753970","unsignedApkSha256":"2c6b9f9f1d74ec2ec6296feee4b563155f5a73ee92235aa020144ec72c5c1a6a","patchSha256":"97d662fc694f0d0e2a64b9cc5ed45812a68aad8b0ae98607bb0afb63d6a540c3","signedApkSha256":"fc51fdf2bd102270e6fef21f626d2e97f77e7564418ad5be37546a51ba7bac8f","signedApkSize":7477650,"assets":462,"sourceSha":"e4f3da97ec06e947a86f30f410e5afe90b4b71a0","certificate":"48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4","regressionTests":"3352/3352 passed from exact extracted package"}' > .release-staging/v344-manifest.json
+          printf '%s' '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' > .release-staging/v344-signed-delta.b64
+          M=.release-staging/v344-manifest.json
+          case "$BUNDLE_URL" in https://*.oaiusercontent.com/files/*) ;; *) exit 1;; esac
+          curl -fSsL --retry 2 --connect-timeout 15 --max-time 150 "$BUNDLE_URL" -o /tmp/bundle.zip
+          echo "$(jq -r .unsignedBundleSha256 "$M")  /tmp/bundle.zip" | sha256sum -c
+          unzip -q /tmp/bundle.zip -d /tmp/yhr332
+          find /tmp/yhr332 -type f
+          U=$(find /tmp/yhr332 -type f -name '*.apk')
+          S=$(find /tmp/yhr332 -type f -name EXACT_SOURCE.txt)
+          test -f "$U"
+          grep -F 'e4f3da97ec06e947a86f30f410e5afe90b4b71a0' "$S"
+          echo "$(jq -r .unsignedApkSha256 "$M")  $U" | sha256sum -c
+          cat .release-staging/v344-signed-delta.b64 | base64 -d > /tmp/delta.zst
+          echo "$(jq -r .patchSha256 "$M")  /tmp/delta.zst" | sha256sum -c
+          mkdir -p releases
+          A="releases/$(jq -r .artifact "$M")"
+          zstd --patch-from="$U" -d -q -f /tmp/delta.zst -o "$A"
+          echo "$(jq -r .signedApkSha256 "$M")  $A" | sha256sum -c
+          test "$(stat -c %s "$A")" = "$(jq -r .signedApkSize "$M")"
+          python - "$U" "$A" <<'PY'
+          import sys,zipfile,hashlib
+          with zipfile.ZipFile(sys.argv[1]) as a, zipfile.ZipFile(sys.argv[2]) as b:
+              assert a.testzip() is None and b.testzip() is None
+              def entries(z):
+                  return {i.filename:hashlib.sha256(z.read(i)).hexdigest() for i in z.infolist() if not i.is_dir() and not i.filename.startswith('META-INF/')}
+              x,y=entries(a),entries(b)
+              assert x==y
+              assert len([n for n in y if n.startswith('assets/www/')])==462
+              print('Signed/unsigned payload parity and 462 web assets verified')
+          PY
+          SDK="$ANDROID_HOME/build-tools/35.0.0"
+          if [ ! -x "$SDK/apksigner" ]; then sdkmanager 'build-tools;35.0.0'; fi
+          "$SDK/zipalign" -c -v 4 "$A" > /tmp/align.txt
+          "$SDK/aapt" dump badging "$A" | grep -F "package: name='com.yellowhatresale.taxes' versionCode='146' versionName='3.0.44'"
+          "$SDK/apksigner" verify --verbose --print-certs "$A" | tee /tmp/sign.txt
+          grep -F 'Signer #1 certificate SHA-256 digest: 48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4' /tmp/sign.txt
+          grep -F 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/sign.txt
+          grep -F 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/sign.txt
+          grep -F 'Number of signers: 1' /tmp/sign.txt
+      - name: Publish and verify release before updating feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          M=.release-staging/v344-manifest.json
+          A="releases/$(jq -r .artifact "$M")"
+          HASH=$(jq -r .signedApkSha256 "$M")
+          NAME=$(basename "$A")
+          gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" > /tmp/old.json
+          PREV=$(jq -r .sha /tmp/old.json)
+          test "$PREV" = d2bdae6346b2cbeefacc03f60e220981fc60138f
+          jq -r .content /tmp/old.json | base64 -d > /tmp/old-feed.json
+          cat /tmp/old-feed.json
+          gh release view v3.0.43 --repo "$GITHUB_REPOSITORY" >/dev/null
+          for attempt in 1 2 3; do
+            if gh release view v3.0.44 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then break; fi
+            if gh release create v3.0.44 "$A" --repo "$GITHUB_REPOSITORY" --target main --title 'Yellow Hat Resale v3.0.44 — Portrait lock and compact Orders cards' --notes 'Portrait-only native app and Test Mode; handles rotation configuration changes without WebView recreation. Removes refund status badges from compact Orders cards while preserving refund records and calculations. All 3352 tests passed. No financial, tax, synchronization, database or Worker changes. Preserve v3.0.43 as rollback. Physical Android acceptance pending.'; then break; fi
+            if [ "$attempt" = 3 ]; then gh release view v3.0.44 --repo "$GITHUB_REPOSITORY" >/dev/null; break; fi
+            sleep $((attempt * 5))
+          done
+          gh release view v3.0.44 --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets | tee /tmp/release.json
+          jq -e '.isDraft==false and .isPrerelease==false' /tmp/release.json
+          mkdir -p /tmp/readback
+          gh release download v3.0.44 --repo "$GITHUB_REPOSITORY" --pattern "$NAME" --dir /tmp/readback
+          echo "$HASH  /tmp/readback/$NAME" | sha256sum -c
+          URL="https://github.com/$GITHUB_REPOSITORY/releases/download/v3.0.44/$NAME"
+          curl -fSsL --retry 3 "$URL" -o /tmp/public.apk
+          echo "$HASH  /tmp/public.apk" | sha256sum -c
+          PUB=$(gh release view v3.0.44 --repo "$GITHUB_REPOSITORY" --json publishedAt --jq .publishedAt)
+          test -n "$PUB"
+          jq --arg publishedAt "$PUB" --arg url "$URL" --arg hash "$HASH" --arg source 'e4f3da97ec06e947a86f30f410e5afe90b4b71a0' '.version="3.0.44" | .versionCode=146 | .apkUrl=$url | .sha256=$hash | .sourceSha=$source | .publishedAt=$publishedAt' /tmp/old-feed.json > /tmp/new-feed.json
+          cat /tmp/new-feed.json
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/version.json" -f message='Publish verified v3.0.44 update feed' -f branch=main -f sha="$PREV" -f content="$(base64 -w0 /tmp/new-feed.json)" >/tmp/update.json
+          gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" --jq .content | base64 -d > /tmp/api-feed.json
+          cmp /tmp/new-feed.json /tmp/api-feed.json
+          for i in $(seq 1 36); do
+            if curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/version.json?verify=$(date +%s)" -o /tmp/raw-feed.json && cmp -s /tmp/new-feed.json /tmp/raw-feed.json; then
+              echo 'PUBLIC APK AND UPDATE FEED VERIFIED'
+              cat /tmp/raw-feed.json
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
