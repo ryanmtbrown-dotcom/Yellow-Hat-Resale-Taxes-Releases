@@ -1,0 +1,75 @@
+name: Verify live v3.0.47 upstream MCP
+on:
+  push:
+    branches: [verification/v347-live-mcp-20261126]
+    paths: [.github/workflows/v347-verify-upstream-once.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.event.head_commit.message == 'verify: exact live v3.0.47 MCP registry and read-only calls (one time)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify all exact schemas and invoke all 18 public preparation/read-only tools
+        run: |
+          python3 -u - <<'PY'
+          import json,hashlib,urllib.request
+          URL='https://yellow-hat-resale-plugin-v2.ryan-m-t-brown.workers.dev/mcp'
+          D='2026-07-01'
+          def rpc(method,params={}):
+              req=urllib.request.Request(URL,data=json.dumps({'jsonrpc':'2.0','id':1,'method':method,'params':params}).encode(),headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream','User-Agent':'YellowHatReleaseVerification/3.0.47'})
+              with urllib.request.urlopen(req,timeout=15) as r:
+                  out=json.load(r)
+              assert 'error' not in out,(method,params.get('name'),out.get('error'))
+              return out['result']
+          def digest(x):
+              return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()
+          init=rpc('initialize',{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'release-verification','version':'1.0'}})
+          assert init['serverInfo']['name']=='yellow-hat-resale-v2'
+          tools=rpc('tools/list')['tools']
+          resources=rpc('resources/list')['resources']
+          assert len(tools)==18 and digest(tools)=='04d584948f83fe95c8da44bdd432307562e7891020cdfa57cbb3d1324c8be128'
+          assert digest(resources)=='fb2e1d7c323f6b855d0475b57d88026ec6ec9834938522072960f3170a4d0ac2'
+          uri=resources[0]['uri'];assert rpc('resources/read',{'uri':uri})['contents'][0]['uri']==uri
+          print('PASS live upstream exact 18 tool schemas and original resource',flush=True)
+          payment={'nominalDate':D,'paidDate':D,'amountCents':6000,'ownerShareBps':10000,'businessUseBps':3333,'businessPurpose':'Synthetic verification only'}
+          F={
+            'open_import_studio':{},
+            'check_release_status':{},
+            'list_import_workflows':{},
+            'prepare_recurring_template':{'displayName':'TEST ONLY','payee':'Synthetic provider','businessPurpose':'Synthetic verification','category':'phone_internet','standardGrossCents':6000,'startDate':D,'rule':{'kind':'days','interval':30},'ownerShareBps':10000,'businessUseBps':3333,'reviewCadence':'quarterly','timezone':'America/Juneau','paymentMethod':'other'},
+            'prepare_financial_transaction':{'action':'local-sale','date':D,'paidDate':D,'description':'Synthetic sale','totalCents':1050,'priceCents':1000,'taxCents':50,'paymentMethod':'cash','source':'Direct','quantity':1,'exemption':'none'},
+            'prepare_invoice':{'merchant':'Synthetic supplier','purchaseDate':D,'paidDate':D,'receiptReference':'TEST-INVOICE','paymentMethod':'cash','ownerShareBps':10000,'items':[{'name':'Mailers','quantity':1,'lineAmountCents':1000,'kind':'operating_expense','category':'packaging_supplies','businessPurpose':'Shipping','businessUseBps':3333},{'name':'Cards','quantity':1,'lineAmountCents':2000,'kind':'merchandise_purchase'}],'taxCents':150,'shippingCents':0,'otherCents':0,'discountCents':0,'grossCents':3150},
+            'prepare_inventory_acquisition':{'mode':'itemized','label':'Synthetic cards','physicalCount':2,'availability':'confirmed_on_hand','confirmedDay':D,'countEstimated':False,'lines':[{'name':'Synthetic card','condition':'U','finish':'unknown','quantity':2}],'acquiredDate':D,'source':'owner_transfer','costStatus':'unknown','expenseAction':'none'},
+            'prepare_source_file_import':{'workflow':'tcgplayer-ytd','endDate':D},
+            'prepare_order_fulfillment':{'sourceOrderId':'TEST-ORDER-A','action':'replace-label'},
+            'prepare_sale_display_correction':{'sourceOrderId':'TEST-ORDER-A','originalName':'Synthetic card','originalSet':'Foundations','displayName':'Synthetic corrected display'},
+            'prepare_order_creation':{'sourceOrderId':'TEST-ORDER-A','customerName':'Synthetic Buyer','payoutCents':325,'shippingMethod':'Stamp'},
+            'prepare_journal_entry':{'entryDate':D,'subject':'TEST ONLY','body':'Synthetic verification, never approve or post.'},
+            'prepare_recurring_payments':{'billName':'Synthetic bill','payments':[payment]},
+            'prepare_recurring_payment_correction':{'billName':'Synthetic bill','nominalDate':D,'ownerShareBps':10000,'businessUseBps':2500,'businessPurpose':'Synthetic corrected recorded use'},
+            'prepare_recurring_change':{'billName':'Synthetic bill','action':'pause','effectiveFrom':D},
+            'prepare_certificate_draft':{'billName':'Synthetic bill','period':{'type':'quarterly','year':2026,'index':3},'businessName':'Synthetic business','explanation':{'businessPurpose':'Dispatch','methodology':'Recorded allocation','evidenceType':'recorded'},'overrides':[]},
+            'prepare_paid_expense':{'action':'operating','description':'TEST ONLY','paidDate':D,'amountCents':100,'merchant':'Synthetic vendor','category':'office_supplies','businessUseBps':10000,'paymentMethod':'other'},
+            'research_card_printing':{'name':'Lightning Bolt','setCode':'m10','collectorNumber':'146','language':'en','finish':'nonfoil'}
+          }
+          assert set(F)=={t['name'] for t in tools}
+          failures=[]
+          for n,args in F.items():
+              try:
+                  x=rpc('tools/call',{'name':n,'arguments':args})['structuredContent']
+                  if n.startswith('prepare_'):
+                      assert x['status']=='prepared-not-saved' and x['productionImports'] is False and x['requiresPairedStudioApproval'] is True and x['pairedIntakeAvailable'] is True
+                  elif n=='research_card_printing':
+                      assert x['status']=='verified-catalog-printing' and x['productionImports'] is False
+                  else:
+                      assert x['planningBaseline']=='3.0.47' and x['productionImports'] is True and len(x['enabledContracts'])==32
+                      if n!='list_import_workflows':
+                          assert x['publishedVersion']=='3.0.47' and x['baselineMatch'] is True and x['versionCode']==149
+                  print('PASS',n,x.get('status','32 contracts'),flush=True)
+              except Exception as e:
+                  failures.append(n);print('FAIL',n,str(e)[:300],flush=True)
+          print('UPSTREAM INVOCATIONS:',18-len(failures),'/18. No pairing, submissions, approvals, or production writes invoked.',flush=True)
+          assert not failures,failures
+          PY
