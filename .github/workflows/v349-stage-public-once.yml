@@ -1,0 +1,153 @@
+name: Stage verified v3.0.49 draft APK
+on:
+  push:
+    branches: [release/v349-public-one-time-20261126]
+    paths: [.github/workflows/v349-stage-public-once.yml]
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: >-
+      github.event.head_commit.message == 'stage: verified signed v3.0.49 draft APK (one time)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Reconstruct and verify exact signed APK
+        env:
+          BUNDLE_URL: 'https://sdmntprwestus3.oaiusercontent.com/files/00000000-8c64-81fd-93a4-301369b1e0dc/raw?se=2026-11-27T02%3A30%3A58Z&sp=r&sv=2026-06-06&sr=b&scid=fe5a8d6b-f472-5501-bbef-4cf322e82f15&skoid=1a0ef048-201c-43e0-8950-52d58956a71a&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-11-26T22%3A57%3A04Z&ske=2026-11-27T22%3A57%3A04Z&sks=b&skv=2026-06-06&sig=aPlNPKMqukaUDFnhoKStpif/YiiDMQXig9DFvaT5Ii0%3D'
+        run: |
+          set -euo pipefail
+          mkdir -p .release-staging
+          printf '%s\n' '{"artifact":"Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.49.apk","unsignedBundleSha256":"5133aaf1f485790032d99e914a7232b7a9c0389acf6ca4bf1049083671158977","unsignedApkSha256":"c8efeb00a56879087dc02032b9be0ca30b1c3d6fe0c6f29ac94342baa131e752","patchSha256":"d1f83f814d020be029778406361fc39605c1c06ece035f8fc70a98a5ffe0c6b6","signedApkSha256":"0903fd391038becd44152812ba33efef507f67c8dca22d34c6d468f887957a15","signedApkSize":7630203,"assets":545,"sourceSha":"791a6e2cde279492c7e188869b3e974f08fa607d","certificate":"48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4","regressionTests":"3565/3565 passed from exact extracted package and independent CI"}' > .release-staging/v349-manifest.json
+
+          M=.release-staging/v349-manifest.json
+          case "$BUNDLE_URL" in https://*.oaiusercontent.com/files/*) ;; *) exit 1;; esac
+          curl -fSsL --retry 2 --connect-timeout 15 --max-time 150 "$BUNDLE_URL" -o /tmp/bundle.zip
+          echo "$(jq -r .unsignedBundleSha256 "$M")  /tmp/bundle.zip" | sha256sum -c
+          unzip -q /tmp/bundle.zip -d /tmp/yhr332
+          find /tmp/yhr332 -type f
+          U=$(find /tmp/yhr332 -type f -name '*.apk')
+          S=$(find /tmp/yhr332 -type f -name EXACT_SOURCE.txt)
+          test -f "$U"
+          grep -F '791a6e2cde279492c7e188869b3e974f08fa607d' "$S"
+          echo "$(jq -r .unsignedApkSha256 "$M")  $U" | sha256sum -c
+          cat .release-staging/v349-signed-block.b64 | base64 -d > /tmp/block.z
+          echo "$(jq -r .patchSha256 "$M")  /tmp/block.z" | sha256sum -c
+          mkdir -p releases
+          A="releases/$(jq -r .artifact "$M")"
+          python - "$U" "$A" /tmp/block.z <<'PY'
+          import sys,zipfile,struct,zlib,io
+          from pathlib import Path
+          u=Path(sys.argv[1]).read_bytes()
+          suffix=zlib.decompress(Path(sys.argv[3]).read_bytes())
+          uz=zipfile.ZipFile(io.BytesIO(u))
+          ui=uz.infolist()
+          out=bytearray()
+          offsets={}
+          for k,x in enumerate(ui):
+              a=x.header_offset
+              n,e=struct.unpack_from('<HH',u,a+26)
+              p=a+30+n+e
+              end=ui[k+1].header_offset if k+1<len(ui) else uz.start_dir
+              header=bytearray(u[a:a+30+n])
+              extra=u[a+30+n:p]
+              offsets[a]=len(out)
+              if x.compress_type==0:
+                  assert extra==bytes(e)
+                  new_e=6+((e-6)%4)
+                  extra=struct.pack('<HHH',0xd935,new_e-4,4)+bytes(new_e-6)
+                  struct.pack_into('<H',header,28,new_e)
+              out+=header+extra+u[p:end]
+          assert len(out)==7535524
+          out+=suffix
+          cdstart=len(out)
+          assert cdstart==7544832
+          a=uz.start_dir
+          for _ in ui:
+              aa=a+46+sum(struct.unpack_from('<HHH',u,a+28))
+              record=bytearray(u[a:aa])
+              struct.pack_into('<I',record,42,offsets[struct.unpack_from('<I',record,42)[0]])
+              out+=record
+              a=aa
+          end=bytearray(u[a:])
+          struct.pack_into('<I',end,16,cdstart)
+          out+=end
+          Path(sys.argv[2]).write_bytes(out)
+          PY
+          echo "$(jq -r .signedApkSha256 "$M")  $A" | sha256sum -c
+          test "$(stat -c %s "$A")" = "$(jq -r .signedApkSize "$M")"
+          python - "$U" "$A" <<'PY'
+          import sys,zipfile,hashlib
+          with zipfile.ZipFile(sys.argv[1]) as a, zipfile.ZipFile(sys.argv[2]) as b:
+              assert a.testzip() is None and b.testzip() is None
+              def entries(z):
+                  return {i.filename:hashlib.sha256(z.read(i)).hexdigest() for i in z.infolist() if not i.is_dir() and not i.filename.startswith('META-INF/')}
+              x,y=entries(a),entries(b)
+              assert x==y
+              assert len([n for n in y if n.startswith('assets/www/')])==545
+              print('Signed/unsigned payload parity and 545 web assets verified')
+          PY
+          SDK="$ANDROID_HOME/build-tools/35.0.0"
+          if [ ! -x "$SDK/apksigner" ]; then sdkmanager 'build-tools;35.0.0'; fi
+          "$SDK/zipalign" -c -v 4 "$A" > /tmp/align.txt
+          "$SDK/aapt" dump badging "$A" | grep -F "package: name='com.yellowhatresale.taxes' versionCode='151' versionName='3.0.49'"
+          "$SDK/apksigner" verify --verbose --print-certs "$A" | tee /tmp/sign.txt
+          grep -F 'Signer #1 certificate SHA-256 digest: 48bf93b7f86d0b5bedf021f20dd189d35216707c8b65ee894150e573a97691a4' /tmp/sign.txt
+          grep -F 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/sign.txt
+          grep -F 'Verified using v3 scheme (APK Signature Scheme v3): true' /tmp/sign.txt
+          grep -F 'Number of signers: 1' /tmp/sign.txt
+      - name: Stage draft and verify signed asset, without changing feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          M=.release-staging/v349-manifest.json
+          A="releases/$(jq -r .artifact "$M")"
+          HASH=$(jq -r .signedApkSha256 "$M")
+          NAME=$(basename "$A")
+          gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" >/tmp/feed-before.json
+          test "$(jq -r .sha /tmp/feed-before.json)" = 0dc3808e10de2a4ee6a592d4c8e35dac856aebd6
+          gh release view v3.0.48 --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets | jq -e '.isDraft==false and .isPrerelease==false and (.assets|length)>0'
+          if gh release view v3.0.49 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo 'Release already exists; refuse replacement'; exit 1; fi
+          gh release create v3.0.49 "$A" --draft --repo "$GITHUB_REPOSITORY" --target main --title 'Yellow Hat Resale v3.0.49 — Independent Import Studio on both phones' --notes 'Independent authorized Import Studio access from both paired phones. Device-specific sessions, imports and revocation. Existing 32 intake contracts and 18 tools preserved. 3565 mandatory tests passed; original signing key; v3.0.48 retained for rollback.'
+          gh release view v3.0.49 --repo "$GITHUB_REPOSITORY" --json isDraft,assets,url | tee /tmp/release.json
+          jq -e '.isDraft==true and (.assets|length)==1' /tmp/release.json
+          mkdir -p /tmp/readback
+          gh release download v3.0.49 --repo "$GITHUB_REPOSITORY" --pattern "$NAME" --dir /tmp/readback
+          echo "$HASH  /tmp/readback/$NAME" | sha256sum -c
+          gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" >/tmp/feed-after.json
+          test "$(jq -r .sha /tmp/feed-after.json)" = 0dc3808e10de2a4ee6a592d4c8e35dac856aebd6
+          echo 'EXACT SIGNED DRAFT ASSET VERIFIED; LIVE FEED UNCHANGED'
+
+      - name: Promote exact verified draft and update public feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v3.0.49
+          NAME=Yellow_Hat_Resale_Inventory_and_Taxes_v3.0.49.apk
+          HASH=0903fd391038becd44152812ba33efef507f67c8dca22d34c6d468f887957a15
+          SOURCE=791a6e2cde279492c7e188869b3e974f08fa607d
+          PREV=0dc3808e10de2a4ee6a592d4c8e35dac856aebd6
+          gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" >/tmp/old.json
+          test "$(jq -r .sha /tmp/old.json)" = "$PREV"
+          jq -r .content /tmp/old.json | base64 -d >/tmp/old-feed.json
+          jq -e '.version=="3.0.48" and .versionCode==150 and .sha256=="3ef77ed2b0e0e1b04674327d38b3bdbbe2804815de10e7c3e5b3285fb2999fed"' /tmp/old-feed.json
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,assets | jq -e --arg name "$NAME" '.isDraft==true and (.assets|length)==1 and .assets[0].name==$name and .assets[0].size==7630203'
+          echo "$HASH  /tmp/readback/$NAME" | sha256sum -c
+          gh release edit "$TAG" --draft=false --prerelease=false --latest --repo "$GITHUB_REPOSITORY"
+          URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$NAME"
+          curl -fSsL --retry 4 --connect-timeout 15 --max-time 150 "$URL" -o /tmp/public.apk
+          echo "$HASH  /tmp/public.apk" | sha256sum -c
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" >/tmp/published.json
+          jq -e --arg name "$NAME" --arg digest "sha256:$HASH" '.draft==false and .prerelease==false and (.assets|length)==1 and .assets[0].name==$name and .assets[0].digest==$digest and .assets[0].size==7630203' /tmp/published.json
+          DATE=$(jq -r .published_at /tmp/published.json)
+          jq -n --arg url "$URL" --arg hash "$HASH" --arg source "$SOURCE" --arg date "$DATE" '{product:"Yellow Hat Resale Inventory and Taxes",version:"3.0.49",versionCode:151,apkUrl:$url,sha256:$hash,sourceSha:$source,publishedAt:$date}' >/tmp/new-feed.json
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/version.json" -f message='release: publish verified v3.0.49 update feed' -f branch=main -f sha="$PREV" -f content="$(base64 -w0 /tmp/new-feed.json)" >/tmp/feed-commit.json
+          gh api "repos/$GITHUB_REPOSITORY/contents/version.json?ref=main" --jq .content | base64 -d >/tmp/live-feed.json
+          cmp /tmp/new-feed.json /tmp/live-feed.json
+          gh release view v3.0.48 --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets | jq -e '.isDraft==false and .isPrerelease==false and (.assets|length)>0'
+          echo 'VERIFIED SIGNED PUBLIC RELEASE AND LIVE UPDATE FEED'
