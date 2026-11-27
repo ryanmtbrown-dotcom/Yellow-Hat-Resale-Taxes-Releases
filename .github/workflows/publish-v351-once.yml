@@ -14,7 +14,9 @@ permissions:
 
 jobs:
   publish:
-    if: github.repository == 'ryanmtbrown-dotcom/Yellow-Hat-Resale-Taxes-Releases' && github.event.head_commit.message == 'release: owner-approved verified v3.0.51 report authority publication'
+    if: >-
+      github.repository == 'ryanmtbrown-dotcom/Yellow-Hat-Resale-Taxes-Releases' &&
+      github.event.head_commit.message == 'release: owner-approved verified v3.0.51 report authority publication'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
